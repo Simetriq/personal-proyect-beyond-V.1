@@ -33,12 +33,16 @@ model Character {
   
   // Valores Fijos
   hp              Int
+  max_hp          Int
   ki              Int
   zeon            Int
   initiative_base Int
+  gold            Float          @default(0)
   
-  // JSONB
+  // JSONB dinámicos
   resistances     Json           // ej: { "cut": 2, "impact": 1, "heat": 0 }
+  inventory       Json           // ej: [{ "id": "pocion", "name": "Poción de Vida", "quantity": 1, "consumable": true }]
+  dotes           Json           // ej: [{ "name": "Supervivencia", "trigger_hp_percent": 30 }]
   
   activeEffects   ActiveEffect[]
   createdAt       DateTime       @default(now())

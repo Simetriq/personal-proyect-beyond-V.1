@@ -1,24 +1,28 @@
-import { resolveAttack } from '../../src/engine/combat';
+import { applyDirectDamage } from '../../src/engine/combat';
 
-describe('Engine: Combat', () => {
-  it('should calculate correct damage when margin is high enough', () => {
-    // attack = 150, def = 50, TA = 2, baseDamage = 100
-    // margin = 100
-    // formula: 100 - (20 + 20) = 60% of 100 = 60
-    const damage = resolveAttack(150, 50, 2, 100);
-    expect(damage).toBe(60);
+describe('Engine: Direct Combat Damage', () => {
+  it('should reduce damage by 10% for TA 1', () => {
+    // 30 damage * (1 - 0.1) = 27
+    expect(applyDirectDamage(30, 1)).toBe(27);
   });
 
-  it('should return 0 damage if margin is not enough to overcome armor', () => {
-    // attack = 100, def = 80, TA = 1, baseDamage = 100
-    // margin = 20
-    // formula: 20 - (20 + 10) = -10 => 0
-    const damage = resolveAttack(100, 80, 1, 100);
-    expect(damage).toBe(0);
+  it('should reduce damage by 20% for TA 2', () => {
+    // 30 damage * (1 - 0.2) = 24
+    expect(applyDirectDamage(30, 2)).toBe(24);
   });
 
-  it('should return 0 damage if defense is higher than attack', () => {
-    const damage = resolveAttack(80, 100, 0, 100);
-    expect(damage).toBe(0);
+  it('should reduce damage by 50% for TA 5', () => {
+    // 30 damage * (1 - 0.5) = 15
+    expect(applyDirectDamage(30, 5)).toBe(15);
+  });
+
+  it('should reduce damage to 1 if TA is 10 or more', () => {
+    // 30 damage * (1 - 1.0) = 0 -> Minimum 1
+    expect(applyDirectDamage(30, 10)).toBe(1);
+    expect(applyDirectDamage(30, 15)).toBe(1);
+  });
+
+  it('should return 0 if damage received is 0', () => {
+    expect(applyDirectDamage(0, 5)).toBe(0);
   });
 });
