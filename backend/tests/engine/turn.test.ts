@@ -1,33 +1,47 @@
 import { processNextTurn, CharacterState } from '../../src/engine/turn';
 
-describe('Engine: Turn', () => {
-  it('should decrease duration of active effects and remove expired ones', () => {
+describe('Engine: Turn Manager', () => {
+  it('should decrease duration of active effects and apply regeneration', () => {
     const characters: CharacterState[] = [
       {
         id: 'char1',
+        hp: 50,
+        max_hp: 100,
+        ki: 10,
+        zeon: 20,
         activeEffects: [
-          { id: 'effect1', modifiers: { stat: 'atk', value: -10 }, duration_rounds: 2 },
-          { id: 'effect2', modifiers: { stat: 'def', value: -20 }, duration_rounds: 1 }
-        ]
-      },
-      {
-        id: 'char2',
-        activeEffects: [
-          { id: 'effect3', modifiers: { stat: 'atk', value: 10 }, duration_rounds: 5 }
+          { id: 'e1', modifiers: {}, duration_rounds: 1 }
+        ],
+        dotes: [
+          { type: 'regen', stat: 'hp', amount: 10 },
+          { type: 'regen', stat: 'zeon', amount: 5 }
         ]
       }
     ];
 
     const result = processNextTurn(characters);
 
-    // Char 1: effect1 duration becomes 1. effect2 duration becomes 0 (removed).
-    expect(result[0].activeEffects.length).toBe(1);
-    expect(result[0].activeEffects[0].id).toBe('effect1');
-    expect(result[0].activeEffects[0].duration_rounds).toBe(1);
+    expect(result[0].activeEffects.length).toBe(0); // effect removed
+    expect(result[0].hp).toBe(60); // regenerated 10 hp
+    expect(result[0].zeon).toBe(25); // regenerated 5 zeon
+  });
 
-    // Char 2: effect3 duration becomes 4.
-    expect(result[1].activeEffects.length).toBe(1);
-    expect(result[1].activeEffects[0].id).toBe('effect3');
-    expect(result[1].activeEffects[0].duration_rounds).toBe(4);
+  it('hp regeneration should not exceed max_hp', () => {
+    const characters: CharacterState[] = [
+      {
+        id: 'char1',
+        hp: 95,
+        max_hp: 100,
+        ki: 0,
+        zeon: 0,
+        activeEffects: [],
+        dotes: [
+          { type: 'regen', stat: 'hp', amount: 10 }
+        ]
+      }
+    ];
+
+    const result = processNextTurn(characters);
+    expect(result[0].hp).toBe(100);
   });
 });

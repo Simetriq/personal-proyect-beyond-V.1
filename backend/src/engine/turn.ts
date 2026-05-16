@@ -6,19 +6,23 @@ export interface ActiveEffect {
 
 export interface CharacterState {
   id: string;
+  hp: number;
+  max_hp: number;
+  ki: number;
+  zeon: number;
   activeEffects: ActiveEffect[];
+  dotes?: any[]; // Array de dotes, ej. { "type": "regen", "stat": "zeon", "amount": 10 }
 }
 
 /**
- * Procesa el paso del turno para una lista de personajes.
- * Reduce la duración de los efectos activos en 1 round.
- * Elimina los efectos que llegan a 0 de duración.
- * @param characters Lista de personajes de la campaña en combate
- * @returns Lista de personajes con sus efectos actualizados
+ * Procesa el paso de turno (next_round_tick) para una lista de personajes.
+ * Reduce la duración de efectos, elimina expirados y aplica regeneraciones.
+ * @param characters Lista del estado de los personajes de la campaña
+ * @returns Lista con el estado actualizado
  */
 export function processNextTurn(characters: CharacterState[]): CharacterState[] {
   return characters.map(char => {
-    // Filtramos y actualizamos los efectos
+    // 1. Limpieza de efectos
     const updatedEffects = char.activeEffects
       .map(effect => ({
         ...effect,
@@ -26,8 +30,31 @@ export function processNextTurn(characters: CharacterState[]): CharacterState[] 
       }))
       .filter(effect => effect.duration_rounds > 0);
 
+    // 2. Regeneración
+    let newHp = char.hp;
+    let newKi = char.ki;
+    let newZeon = char.zeon;
+
+    if (Array.isArray(char.dotes)) {
+      char.dotes.forEach(dote => {
+        if (dote.type === 'regen') {
+          if (dote.stat === 'hp') {
+            newHp = Math.min(newHp + dote.amount, char.max_hp);
+          } else if (dote.stat === 'ki') {
+            // Asumiremos que por ahora no controlamos max_ki, sólo sumamos
+            newKi += dote.amount;
+          } else if (dote.stat === 'zeon') {
+            newZeon += dote.amount;
+          }
+        }
+      });
+    }
+
     return {
       ...char,
+      hp: newHp,
+      ki: newKi,
+      zeon: newZeon,
       activeEffects: updatedEffects
     };
   });
