@@ -21,9 +21,9 @@ describe('Engine: Turn Manager', () => {
 
     const result = processNextTurn(characters);
 
-    expect(result[0].activeEffects.length).toBe(0); // effect removed
-    expect(result[0].hp).toBe(60); // regenerated 10 hp
-    expect(result[0].zeon).toBe(25); // regenerated 5 zeon
+    expect(result[0].activeEffects.length).toBe(0); // Verifica expiración de efecto
+    expect(result[0].hp).toBe(60); // Verifica regeneración de salud
+    expect(result[0].zeon).toBe(25); // Verifica regeneración de zeon
   });
 
   it('hp regeneration should not exceed max_hp', () => {

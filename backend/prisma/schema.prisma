@@ -31,7 +31,7 @@ model Character {
   campaignId      String
   campaign        Campaign       @relation(fields: [campaignId], references: [id])
   
-  // Valores Fijos
+  // Define las estadísticas base del personaje
   hp              Int
   max_hp          Int
   ki              Int
@@ -39,10 +39,10 @@ model Character {
   initiative_base Int
   gold            Float          @default(0)
   
-  // JSONB dinámicos
-  resistances     Json           // ej: { "cut": 2, "impact": 1, "heat": 0 }
-  inventory       Json           // ej: [{ "id": "pocion", "name": "Poción de Vida", "quantity": 1, "consumable": true }]
-  dotes           Json           // ej: [{ "name": "Supervivencia", "trigger_hp_percent": 30 }]
+  // Define campos estructurados dinámicos en formato JSON
+  resistances     Json
+  inventory       Json
+  dotes           Json
   
   activeEffects   ActiveEffect[]
   createdAt       DateTime       @default(now())
@@ -55,8 +55,8 @@ model ActiveEffect {
   characterId     String
   character       Character @relation(fields: [characterId], references: [id])
   
-  // JSONB
-  modifiers       Json      // ej: [{ "stat": "atk", "value": -20 }]
+  // Define los modificadores del efecto en formato JSON
+  modifiers       Json
   
   duration_rounds Int
   createdAt       DateTime  @default(now())

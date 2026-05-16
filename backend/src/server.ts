@@ -6,26 +6,26 @@ const fastify = Fastify({ logger: true });
 
 async function startServer() {
   try {
-    // Inicializar Fastify
+    // Inicializa el servidor Fastify
     await fastify.ready();
 
-    // Integrar Socket.IO con el servidor nativo de Node provisto por Fastify
+    // Configura el servidor Socket.IO
     const io = new Server(fastify.server, {
       cors: {
-        origin: '*', // En producción deberíamos limitar esto
+        origin: '*',
         methods: ['GET', 'POST']
       }
     });
 
-    // Configurar Eventos
+    // Registra los eventos de websockets
     setupSocketEvents(io);
 
-    // Endpoint básico para comprobar estado
+    // Responde solicitudes de estado
     fastify.get('/ping', async (request, reply) => {
       return { status: 'ok', time: new Date().toISOString() };
     });
 
-    // Arrancar el servidor
+    // Inicia el servidor web
     const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Servidor Anima Combat Assistant corriendo en http://localhost:${port}`);

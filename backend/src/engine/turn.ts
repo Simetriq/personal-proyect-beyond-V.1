@@ -11,18 +11,12 @@ export interface CharacterState {
   ki: number;
   zeon: number;
   activeEffects: ActiveEffect[];
-  dotes?: any[]; // Array de dotes, ej. { "type": "regen", "stat": "zeon", "amount": 10 }
+  dotes?: any[];
 }
 
-/**
- * Procesa el paso de turno (next_round_tick) para una lista de personajes.
- * Reduce la duración de efectos, elimina expirados y aplica regeneraciones.
- * @param characters Lista del estado de los personajes de la campaña
- * @returns Lista con el estado actualizado
- */
+// Procesa el paso de turno aplicando regeneraciones y acortando efectos
 export function processNextTurn(characters: CharacterState[]): CharacterState[] {
   return characters.map(char => {
-    // 1. Limpieza de efectos
     const updatedEffects = char.activeEffects
       .map(effect => ({
         ...effect,
@@ -30,7 +24,6 @@ export function processNextTurn(characters: CharacterState[]): CharacterState[] 
       }))
       .filter(effect => effect.duration_rounds > 0);
 
-    // 2. Regeneración
     let newHp = char.hp;
     let newKi = char.ki;
     let newZeon = char.zeon;
@@ -41,7 +34,6 @@ export function processNextTurn(characters: CharacterState[]): CharacterState[] 
           if (dote.stat === 'hp') {
             newHp = Math.min(newHp + dote.amount, char.max_hp);
           } else if (dote.stat === 'ki') {
-            // Asumiremos que por ahora no controlamos max_ki, sólo sumamos
             newKi += dote.amount;
           } else if (dote.stat === 'zeon') {
             newZeon += dote.amount;
