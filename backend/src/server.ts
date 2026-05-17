@@ -6,6 +6,11 @@ const fastify = Fastify({ logger: true });
 
 async function startServer() {
   try {
+    // Responde solicitudes de estado
+    fastify.get('/ping', async (request, reply) => {
+      return { status: 'ok', time: new Date().toISOString() };
+    });
+
     // Inicializa el servidor Fastify
     await fastify.ready();
 
@@ -19,11 +24,6 @@ async function startServer() {
 
     // Registra los eventos de websockets
     setupSocketEvents(io);
-
-    // Responde solicitudes de estado
-    fastify.get('/ping', async (request, reply) => {
-      return { status: 'ok', time: new Date().toISOString() };
-    });
 
     // Inicia el servidor web
     const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;

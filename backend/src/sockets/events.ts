@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { processNextTurn, CharacterState } from '../engine/turn';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ log: ['info'] });
 
 export function setupSocketEvents(io: Server) {
   io.on('connection', (socket: Socket) => {
