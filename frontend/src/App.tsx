@@ -23,13 +23,13 @@ function App() {
             onClick={() => setRole('PLAYER')} 
             className="w-48 h-32 text-2xl font-bold bg-gray-900 border-2 border-gray-700 hover:border-red-500 hover:bg-gray-800 transition-all text-white"
           >
-            ⚔️ Jugador
+             Jugador
           </Button>
           <Button 
             onClick={() => setRole('GM')} 
             className="w-48 h-32 text-2xl font-bold bg-gray-900 border-2 border-gray-700 hover:border-blue-500 hover:bg-gray-800 transition-all text-white"
           >
-            👁️ Game Master
+             Game Master
           </Button>
         </div>
       </div>
