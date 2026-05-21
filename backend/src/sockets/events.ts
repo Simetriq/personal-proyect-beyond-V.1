@@ -88,8 +88,9 @@ export function setupSocketEvents(io: Server) {
         }
 
         broadcastCharacterUpdate(data.campaignId, character);
-      } catch (e) {
+      } catch (e: any) {
         console.error('[Socket] Error creating character:', e);
+        socket.emit('character_error', { message: e.message || 'Error desconocido al crear personaje' });
       }
     });
 
