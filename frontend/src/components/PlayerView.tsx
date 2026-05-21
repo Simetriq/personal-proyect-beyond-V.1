@@ -205,14 +205,13 @@ export function PlayerView() {
               </select>
             </div>
 
-            <Button onClick={handleApplyDamage} className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg">
+            <Button onClick={handleApplyDamage} className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg transition-all active:scale-95 duration-100">
               Aplicar Daño
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Panel Central: Inventario y Tienda */}
       <div className="col-span-6 h-full z-10">
         <Card className="h-full border-gray-800 flex flex-col bg-card/50">
           <Tabs defaultValue="inventory" className="w-full h-full flex flex-col">
@@ -251,13 +250,13 @@ export function PlayerView() {
                           <TableCell className="text-right space-x-2">
                             {item.type === 'ARMADURA' && (
                               item.equipped ? (
-                                <Button size="sm" variant="outline" onClick={() => unequipItem(CHARACTER_ID, item.id)} className="bg-red-900 hover:bg-red-800 border-red-700 text-white">Desequipar</Button>
+                                <Button size="sm" variant="outline" onClick={() => unequipItem(CHARACTER_ID, item.id)} className="bg-red-900 hover:bg-red-800 border-red-700 text-white transition-all active:scale-95 duration-100">Desequipar</Button>
                               ) : (
-                                <Button size="sm" variant="secondary" onClick={() => equipItem(CHARACTER_ID, item.id)} className="bg-green-900 hover:bg-green-800 text-white">Equipar</Button>
+                                <Button size="sm" variant="secondary" onClick={() => equipItem(CHARACTER_ID, item.id)} className="bg-green-900 hover:bg-green-800 text-white transition-all active:scale-95 duration-100">Equipar</Button>
                               )
                             )}
                             {item.type === 'CONSUMIBLE' && (
-                              <Button size="sm" variant="secondary" onClick={() => useItem(CHARACTER_ID, item.id)} className="bg-blue-900 hover:bg-blue-800 text-white">Usar</Button>
+                              <Button size="sm" variant="secondary" onClick={() => useItem(CHARACTER_ID, item.id)} className="bg-blue-900 hover:bg-blue-800 text-white transition-all active:scale-95 duration-100">Usar</Button>
                             )}
                           </TableCell>
                         </TableRow>
