@@ -32,7 +32,23 @@ export class CharacterRepository {
         initiative_base: 0,
         gold: data.gold,
         resistances: data.resistances,
-        inventory: {},
+        inventory: {
+          'item-1': {
+            id: 'item-1',
+            name: 'Poción de Vida Menor',
+            quantity: 3,
+            type: 'CONSUMIBLE',
+            equipped: false
+          },
+          'item-2': {
+            id: 'item-2',
+            name: 'Coraza de Cuero',
+            quantity: 1,
+            type: 'ARMADURA',
+            equipped: false,
+            modifiers: { FIL: 2, CON: 1, PEN: 1 }
+          }
+        },
         dotes: []
       }
     });
@@ -47,15 +63,15 @@ export class CharacterRepository {
       data: {
         hp: character.currentHp,
         gold: character.gold,
-        // Guardamos las resistencias de vuelta como JSON
+        // Guardamos las resistencias BASE de vuelta como JSON
         resistances: {
-          FIL: character.resistances.FIL,
-          CON: character.resistances.CON,
-          PEN: character.resistances.PEN,
-          CAL: character.resistances.CAL,
-          ELE: character.resistances.ELE,
-          FRI: character.resistances.FRI,
-          ENE: character.resistances.ENE
+          FIL: character.baseResistances.FIL,
+          CON: character.baseResistances.CON,
+          PEN: character.baseResistances.PEN,
+          CAL: character.baseResistances.CAL,
+          ELE: character.baseResistances.ELE,
+          FRI: character.baseResistances.FRI,
+          ENE: character.baseResistances.ENE
         },
         inventory: character.inventory ? JSON.parse(JSON.stringify(character.inventory)) : {}
       }

@@ -22,6 +22,9 @@ interface CombatStore {
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
   createCharacter: (campaignId: string, characterId: string, data: any) => void;
+  equipItem: (characterId: string, itemId: string) => void;
+  unequipItem: (characterId: string, itemId: string) => void;
+  useItem: (characterId: string, itemId: string) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -84,6 +87,27 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         characterId,
         ...data
       });
+    }
+  },
+
+  equipItem: (characterId: string, itemId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('equip_item', { campaignId, characterId, itemId });
+    }
+  },
+
+  unequipItem: (characterId: string, itemId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('unequip_item', { campaignId, characterId, itemId });
+    }
+  },
+
+  useItem: (characterId: string, itemId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('use_item', { campaignId, characterId, itemId });
     }
   }
 }));

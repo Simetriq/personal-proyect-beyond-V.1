@@ -8,7 +8,7 @@ import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,18 +158,39 @@ export function PlayerView() {
                   <TableHeader>
                     <TableRow className="border-gray-800 hover:bg-transparent">
                       <TableHead>Ítem</TableHead>
+                      <TableHead>Tipo</TableHead>
                       <TableHead>Cantidad</TableHead>
                       <TableHead className="text-right">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow className="border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                      <TableCell className="font-medium text-gray-200">Poción de Curación Menor</TableCell>
-                      <TableCell className="text-gray-300">3</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="secondary" className="bg-gray-800 hover:bg-gray-700">Consumir</Button>
-                      </TableCell>
-                    </TableRow>
+                    {character.inventory && Object.values(character.inventory).length > 0 ? (
+                      Object.values(character.inventory).map((item: any) => (
+                        <TableRow key={item.id} className="border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                          <TableCell className="font-medium text-gray-200">
+                            {item.name} {item.equipped && <span className="text-xs text-green-500 ml-2">(Equipado)</span>}
+                          </TableCell>
+                          <TableCell className="text-gray-400 text-sm">{item.type}</TableCell>
+                          <TableCell className="text-gray-300">{item.quantity}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {item.type === 'ARMADURA' && (
+                              item.equipped ? (
+                                <Button size="sm" variant="outline" onClick={() => unequipItem(CHARACTER_ID, item.id)} className="bg-red-900 hover:bg-red-800 border-red-700 text-white">Desequipar</Button>
+                              ) : (
+                                <Button size="sm" variant="secondary" onClick={() => equipItem(CHARACTER_ID, item.id)} className="bg-green-900 hover:bg-green-800 text-white">Equipar</Button>
+                              )
+                            )}
+                            {item.type === 'CONSUMIBLE' && (
+                              <Button size="sm" variant="secondary" onClick={() => useItem(CHARACTER_ID, item.id)} className="bg-blue-900 hover:bg-blue-800 text-white">Usar</Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-gray-500 py-4">Inventario vacío.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TabsContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -10,7 +10,11 @@ interface CreateCharacterFormProps {
 }
 
 export function CreateCharacterForm({ campaignId, characterId }: CreateCharacterFormProps) {
-  const { createCharacter } = useCombatStore();
+  const { createCharacter, connectToCampaign } = useCombatStore();
+
+  useEffect(() => {
+    connectToCampaign(campaignId);
+  }, [campaignId, connectToCampaign]);
 
   const [name, setName] = useState("");
   const [maxHp, setMaxHp] = useState("");

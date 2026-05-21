@@ -50,14 +50,63 @@ export function setupSocketEvents(io: Server) {
           maxHp: character.maxHp,
           gold: character.gold,
           state: character.state,
-          resistances: data.resistances,
-          inventory: {}
+          resistances: character.resistances,
+          inventory: character.inventory
         });
         
         console.log(`[Socket] Character created: ${character.name}`);
       } catch (e) {
         console.error('[Socket] Error creating character:', e);
       }
+    });
+
+    const broadcastCharacterUpdate = (campaignId: string, character: any) => {
+      io.to(campaignId).emit('character_updated', {
+        characterId: character.id,
+        name: character.name,
+        hp: character.currentHp,
+        maxHp: character.maxHp,
+        gold: character.gold,
+        state: character.state,
+        resistances: character.resistances,
+        inventory: character.inventory
+      });
+    };
+
+    socket.on('equip_item', async (data: { campaignId: string, characterId: string, itemId: string }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        if (character) {
+          character.equipItem(data.itemId);
+          await repo.save(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('unequip_item', async (data: { campaignId: string, characterId: string, itemId: string }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        if (character) {
+          character.unequipItem(data.itemId);
+          await repo.save(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('use_item', async (data: { campaignId: string, characterId: string, itemId: string }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        if (character) {
+          character.useItem(data.itemId);
+          await repo.save(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
     });
 
     // Apply damage to a character using the new OOP domain rules

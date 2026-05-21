@@ -2,14 +2,34 @@ import { Resistances } from './Resistances';
 
 export type CharacterState = 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 
+export interface ItemModifier {
+  FIL?: number;
+  CON?: number;
+  PEN?: number;
+  CAL?: number;
+  ELE?: number;
+  FRI?: number;
+  ENE?: number;
+}
+
+export interface Item {
+  id: string;
+  name: string;
+  quantity: number;
+  type: 'CONSUMIBLE' | 'ARMADURA' | 'OTROS';
+  equipped: boolean;
+  modifiers?: ItemModifier;
+}
+
 export class Character {
   public id: string;
   public name: string;
   public currentHp: number;
   public maxHp: number;
   public gold: number;
+  public baseResistances: Resistances;
   public resistances: Resistances;
-  public inventory: any; // Mapea al JSON de la DB
+  public inventory: Record<string, Item>; 
   public state: CharacterState;
 
   constructor(data: any) {
@@ -22,13 +42,80 @@ export class Character {
     // Determinación del estado inicial
     this.state = this.currentHp > 0 ? 'ACTIVO' : 'INCONSCIENTE';
 
-    // Parseo seguro de la armadura (TA)
+    // Parseo seguro de la armadura base (TA)
     const res = data.resistances || {};
-    this.resistances = new Resistances(
+    this.baseResistances = new Resistances(
       res.FIL, res.CON, res.PEN, res.CAL, res.ELE, res.FRI, res.ENE
     );
 
+    // Inicializamos el inventario
     this.inventory = data.inventory || {};
+    
+    // Calculamos las resistencias totales (base + equipamiento)
+    this.resistances = new Resistances();
+    this.recalculateResistances();
+  }
+
+  private recalculateResistances() {
+    let FIL = this.baseResistances.FIL;
+    let CON = this.baseResistances.CON;
+    let PEN = this.baseResistances.PEN;
+    let CAL = this.baseResistances.CAL;
+    let ELE = this.baseResistances.ELE;
+    let FRI = this.baseResistances.FRI;
+    let ENE = this.baseResistances.ENE;
+
+    // Sumar modificadores de todos los ítems equipados
+    for (const itemId in this.inventory) {
+      const item = this.inventory[itemId];
+      if (item.equipped && item.modifiers) {
+        FIL += item.modifiers.FIL || 0;
+        CON += item.modifiers.CON || 0;
+        PEN += item.modifiers.PEN || 0;
+        CAL += item.modifiers.CAL || 0;
+        ELE += item.modifiers.ELE || 0;
+        FRI += item.modifiers.FRI || 0;
+        ENE += item.modifiers.ENE || 0;
+      }
+    }
+
+    this.resistances = new Resistances(FIL, CON, PEN, CAL, ELE, FRI, ENE);
+  }
+
+  public equipItem(itemId: string) {
+    const item = this.inventory[itemId];
+    if (item && item.type === 'ARMADURA') {
+      item.equipped = true;
+      this.recalculateResistances();
+    }
+  }
+
+  public unequipItem(itemId: string) {
+    const item = this.inventory[itemId];
+    if (item && item.type === 'ARMADURA') {
+      item.equipped = false;
+      this.recalculateResistances();
+    }
+  }
+
+  public useItem(itemId: string) {
+    const item = this.inventory[itemId];
+    if (item && item.type === 'CONSUMIBLE' && item.quantity > 0) {
+      // Simular uso de poción genérica (cura 50 HP)
+      // Idealmente, esto vendría en los modifiers del item o un handler específico
+      this.currentHp += 50;
+      if (this.currentHp > this.maxHp) this.currentHp = this.maxHp;
+      
+      item.quantity -= 1;
+      
+      if (this.currentHp > 0 && this.state === 'INCONSCIENTE') {
+        this.state = 'ACTIVO';
+      }
+      
+      if (item.quantity <= 0) {
+        delete this.inventory[itemId]; // Eliminar si se agota
+      }
+    }
   }
 
   /**
@@ -48,7 +135,7 @@ export class Character {
     
     // Calculamos el daño final (siempre mínimo 1 si el ataque impactó)
     let finalDamage = amount * (1 - effectiveReduction);
-    finalDamage = Math.max(1, Math.floor(finalDamage));
+    finalDamage = Math.max(1, Math.round(finalDamage));
 
     this.currentHp -= finalDamage;
 
