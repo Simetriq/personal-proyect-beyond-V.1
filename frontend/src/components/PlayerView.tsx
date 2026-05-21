@@ -4,7 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { useCombatStore, DamageType } from "../store/combatStore";
+import { useCombatStore, type DamageType } from "../store/combatStore";
 
 export function PlayerView() {
   const { characters, applyDamage, connectToCampaign } = useCombatStore();
