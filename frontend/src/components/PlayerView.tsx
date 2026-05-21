@@ -12,6 +12,7 @@ export function PlayerView() {
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
+  const [targetId, setTargetId] = useState<string>("char-1");
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
@@ -27,7 +28,7 @@ export function PlayerView() {
   const handleApplyDamage = () => {
     const parsedAmount = parseInt(damageAmount, 10);
     if (!isNaN(parsedAmount) && parsedAmount > 0) {
-      applyDamage(CHARACTER_ID, parsedAmount, selectedType);
+      applyDamage(targetId, parsedAmount, selectedType);
       setDamageAmount(""); // Limpiar
       inputRef.current?.select(); // Auto-seleccionar para el siguiente
     }
@@ -177,17 +178,34 @@ export function PlayerView() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Calculadora de Daño</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <Input 
-              ref={inputRef}
-              type="number" 
-              placeholder="Daño Recibido..." 
-              className="text-lg py-6 bg-gray-900 border-gray-700" 
-              value={damageAmount}
-              onChange={(e) => setDamageAmount(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
+          <CardContent className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-gray-400 text-sm">Objetivo:</label>
+              <select 
+                value={targetId} 
+                onChange={(e) => setTargetId(e.target.value)}
+                className="w-full bg-gray-950 border border-gray-700 text-white rounded p-3 text-lg focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-colors"
+              >
+                {Object.values(characters).map(c => (
+                  <option key={c.id} value={c.id}>{c.name} {c.id.startsWith('npc_') ? '(Enemigo)' : ''}</option>
+                ))}
+              </select>
+            </div>
             
+            <div className="flex gap-2">
+              <div className="flex-grow">
+                <Input 
+                  ref={inputRef}
+                  type="number" 
+                  placeholder="Cantidad..." 
+                  className="w-full text-lg py-6 bg-gray-950 border-gray-700" 
+                  value={damageAmount}
+                  onChange={(e) => setDamageAmount(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
+            </div>
+
             <div className="flex flex-col gap-1">
               <label className="text-sm text-gray-400 font-semibold mb-1">Tipo de Daño:</label>
               <select 

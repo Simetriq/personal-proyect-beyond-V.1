@@ -25,14 +25,28 @@ function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, re
     });
   };
 
-  const handleAddBleed = () => {
+  const handleApplyEffect = (type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR') => {
+    let name = "Corte Profundo";
+    let value = 5;
+    let durationRounds = 3;
+
+    if (type === 'VENENO') {
+      name = "Veneno de Basilisco";
+      value = 15;
+      durationRounds = 2;
+    } else if (type === 'PENALIZADOR') {
+      name = "Aturdido / Shock";
+      value = -20;
+      durationRounds = 1;
+    }
+
     setIsBleeding(true);
     applyEffect(char.id, {
       id: uuidv4(),
-      name: "Sangrado Fuerte",
-      type: "SANGRADO",
-      value: 10,
-      durationRounds: 3
+      name,
+      type,
+      value,
+      durationRounds
     });
     setTimeout(() => setIsBleeding(false), 500);
   };
@@ -81,7 +95,23 @@ function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, re
             🗑️
           </Button>
         )}
-        <Button onClick={handleAddBleed} disabled={isBleeding} variant="outline" size="sm" className="border-red-900 bg-red-950 hover:bg-red-900 text-red-300 mr-2 transition-all active:scale-95 duration-100 disabled:opacity-50">Sangrar</Button>
+        
+        <select 
+          disabled={isBleeding}
+          onChange={(e) => {
+            if (e.target.value) {
+              handleApplyEffect(e.target.value as 'SANGRADO' | 'VENENO' | 'PENALIZADOR');
+              e.target.value = "";
+            }
+          }}
+          className="border border-red-900 bg-red-950 text-red-300 text-sm rounded outline-none px-2 focus:border-red-500 disabled:opacity-50 transition-all cursor-pointer mr-2"
+        >
+          <option value="" disabled selected>➕ Efecto...</option>
+          <option value="SANGRADO">Corte Profundo (Sangrado)</option>
+          <option value="VENENO">Veneno de Basilisco</option>
+          <option value="PENALIZADOR">Aturdido / Shock</option>
+        </select>
+
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:text-white transition-all active:scale-95 duration-100">Editar</Button>
