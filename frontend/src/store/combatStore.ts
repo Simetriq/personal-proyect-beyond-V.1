@@ -14,13 +14,22 @@ export interface Character {
   ki: number;
   zeon: number;
   temporaryShield: number;
+  currentInitiative: number | null;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
+}
+
+export interface CombatState {
+  round: number;
+  turnIndex: number;
+  initiativeQueue: { characterId: string; initiative: number }[];
+  isRequestingInitiative: boolean;
 }
 
 interface CombatStore {
   socket: Socket | null;
   characters: Record<string, Character>;
   campaignId: string | null;
+  combatState: CombatState;
   
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
@@ -32,6 +41,11 @@ interface CombatStore {
   applyEffect: (characterId: string, effect: any) => void;
   nextRoundTick: () => void;
   useAbility: (characterId: string, type: 'KI' | 'ZEON', amount: number) => void;
+  requestInitiatives: () => void;
+  submitInitiative: (characterId: string, initiative: number) => void;
+  nextTurn: () => void;
+  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => void;
+  removeNpc: (characterId: string) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -40,6 +54,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   socket: null,
   characters: {},
   campaignId: null,
+  combatState: {
+    round: 1,
+    turnIndex: -1,
+    initiativeQueue: [],
+    isRequestingInitiative: false
+  },
 
   connectToCampaign: (campaignId: string) => {
     if (get().socket) return;
@@ -69,10 +89,23 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             ki: data.ki !== undefined ? data.ki : state.characters[data.characterId]?.ki,
             zeon: data.zeon !== undefined ? data.zeon : state.characters[data.characterId]?.zeon,
             temporaryShield: data.temporaryShield !== undefined ? data.temporaryShield : state.characters[data.characterId]?.temporaryShield,
+            currentInitiative: data.currentInitiative !== undefined ? data.currentInitiative : state.characters[data.characterId]?.currentInitiative,
             state: data.state as Character['state']
           }
         }
       }));
+    });
+
+    socket.on('combat_state_updated', (data: CombatState) => {
+      set({ combatState: data });
+    });
+
+    socket.on('character_removed', (characterId: string) => {
+      set((state) => {
+        const newCharacters = { ...state.characters };
+        delete newCharacters[characterId];
+        return { characters: newCharacters };
+      });
     });
 
     set({ socket, campaignId });
@@ -147,6 +180,41 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('use_character_ability', { campaignId, characterId, type, amount });
+    }
+  },
+
+  requestInitiatives: () => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('request_initiatives', { campaignId });
+    }
+  },
+
+  submitInitiative: (characterId: string, initiative: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('submit_initiative', { campaignId, characterId, initiative });
+    }
+  },
+
+  nextTurn: () => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('next_turn', { campaignId });
+    }
+  },
+
+  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('spawn_npc', data);
+    }
+  },
+
+  removeNpc: (characterId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('remove_npc', { campaignId, characterId });
     }
   }
 }));

@@ -38,6 +38,7 @@ export class Character {
   public ki: number;
   public zeon: number;
   public temporaryShield: number = 0;
+  public currentInitiative: number | null = null;
   public baseResistances: Resistances;
   public resistances: Resistances;
   public inventory: Record<string, Item>; 
@@ -162,7 +163,7 @@ export class Character {
     }
   }
 
-  public gmOverrideStats(updates: { hp?: number, gold?: number, ki?: number, zeon?: number }) {
+  public gmOverrideStats(updates: { hp?: number, gold?: number, ki?: number, zeon?: number, currentInitiative?: number | null }) {
     if (updates.hp !== undefined) {
       this.currentHp = updates.hp;
       if (this.currentHp > this.maxHp) this.currentHp = this.maxHp;
@@ -184,6 +185,10 @@ export class Character {
     
     if (updates.zeon !== undefined) {
       this.zeon = Math.max(0, updates.zeon);
+    }
+
+    if (updates.currentInitiative !== undefined) {
+      this.currentInitiative = updates.currentInitiative;
     }
   }
 

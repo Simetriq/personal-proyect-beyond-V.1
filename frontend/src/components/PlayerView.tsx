@@ -8,9 +8,10 @@ import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
+  const [initiativeInput, setInitiativeInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
@@ -32,6 +33,14 @@ export function PlayerView() {
     }
   };
 
+  const handleSubmitInitiative = () => {
+    const val = parseInt(initiativeInput, 10);
+    if (!isNaN(val)) {
+      submitInitiative(CHARACTER_ID, val);
+      setInitiativeInput("");
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleApplyDamage();
@@ -50,8 +59,46 @@ export function PlayerView() {
 
   const hpPercentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
 
+  const isActiveTurn = combatState.initiativeQueue[combatState.turnIndex]?.characterId === CHARACTER_ID;
+  const showInitiativeModal = combatState.isRequestingInitiative && character.currentInitiative === null;
+
   return (
     <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
+      
+      {/* Banner de Turno Activo */}
+      {isActiveTurn && !isUnconscious && (
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-50 mt-6 animate-bounce">
+          <div className="bg-green-600 border-2 border-green-400 text-white font-black text-2xl px-12 py-4 rounded-full shadow-[0_0_30px_rgba(74,222,128,0.6)] uppercase tracking-widest">
+            🌟 ¡ES TU TURNO DE ACTUAR! 🌟
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Iniciativa */}
+      {showInitiativeModal && (
+        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm rounded-xl">
+          <Card className="bg-gray-900 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.3)] w-[400px]">
+            <CardHeader>
+              <CardTitle className="text-2xl text-yellow-500 text-center uppercase tracking-wide">¡Tira Iniciativa!</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-gray-300 text-center">El Director de Juego ha solicitado las iniciativas para el Asalto {combatState.round}.</p>
+              <Input 
+                type="number" 
+                placeholder="Resultado de los dados..." 
+                className="text-2xl py-6 text-center bg-gray-950 border-gray-700" 
+                value={initiativeInput}
+                onChange={(e) => setInitiativeInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmitInitiative()}
+                autoFocus
+              />
+              <Button onClick={handleSubmitInitiative} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-6 text-xl">
+                Enviar Resultado
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
       {/* Overlay INCONSCIENTE */}
       {isUnconscious && (
