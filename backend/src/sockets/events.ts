@@ -70,29 +70,24 @@ export function setupSocketEvents(io: Server) {
       try {
         const repo = new CharacterRepository(prisma);
         
-        const character = await repo.create({
-          id: data.characterId,
-          campaignId: data.campaignId,
-          name: data.name,
-          maxHp: data.maxHp,
-          gold: data.gold,
-          ki: data.ki,
-          zeon: data.zeon,
-          resistances: data.resistances
-        });
+        let character = await repo.findById(data.characterId);
+        if (!character) {
+          character = await repo.create({
+            id: data.characterId,
+            campaignId: data.campaignId,
+            name: data.name,
+            maxHp: data.maxHp,
+            gold: data.gold,
+            ki: data.ki,
+            zeon: data.zeon,
+            resistances: data.resistances
+          });
+          console.log(`[Socket] Character created: ${character.name}`);
+        } else {
+          console.log(`[Socket] Character already exists, returning existing: ${character.name}`);
+        }
 
-        io.to(data.campaignId).emit('character_updated', {
-          characterId: character.id,
-          name: character.name,
-          hp: character.currentHp,
-          maxHp: character.maxHp,
-          gold: character.gold,
-          state: character.state,
-          resistances: character.resistances,
-          inventory: character.inventory
-        });
-        
-        console.log(`[Socket] Character created: ${character.name}`);
+        broadcastCharacterUpdate(data.campaignId, character);
       } catch (e) {
         console.error('[Socket] Error creating character:', e);
       }
