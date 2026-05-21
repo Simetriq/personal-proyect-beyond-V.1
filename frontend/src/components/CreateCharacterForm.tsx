@@ -17,6 +17,7 @@ export function CreateCharacterForm({ campaignId, characterId }: CreateCharacter
   }, [campaignId, connectToCampaign]);
 
   const [name, setName] = useState("");
+  const [localCampaignId, setLocalCampaignId] = useState(campaignId || "camp-1");
   const [maxHp, setMaxHp] = useState("");
   const [gold, setGold] = useState("");
   const [ki, setKi] = useState("");
@@ -56,7 +57,7 @@ export function CreateCharacterForm({ campaignId, characterId }: CreateCharacter
       }
     };
 
-    createCharacter(campaignId, characterId, data);
+    createCharacter(localCampaignId, characterId, data);
   };
 
   return (
@@ -78,6 +79,11 @@ export function CreateCharacterForm({ campaignId, characterId }: CreateCharacter
               <h3 className="text-lg font-semibold text-gray-300 border-b border-gray-800 pb-2">
                 Atributos Generales
               </h3>
+              
+              <div className="grid gap-2">
+                <label className="text-sm text-gray-400 font-medium">ID de la Campaña (Sala de Servidor)</label>
+                <Input required value={localCampaignId} onChange={e => setLocalCampaignId(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Ej. camp-1" />
+              </div>
               
               <div className="grid gap-2">
                 <label className="text-sm text-gray-400 font-medium">Nombre del Personaje</label>
@@ -128,8 +134,8 @@ export function CreateCharacterForm({ campaignId, characterId }: CreateCharacter
             </div>
 
             <div className="col-span-1 md:col-span-2 pt-4">
-              <Button type="submit" className="w-full py-6 text-lg font-bold bg-red-600 hover:bg-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]">
-                Unirse a la Campaña
+              <Button type="submit" disabled={!localCampaignId} className="w-full py-6 text-lg font-bold bg-red-600 hover:bg-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)] disabled:opacity-50 transition-all active:scale-95 duration-100">
+                {localCampaignId ? 'Unirse a la Campaña' : '⚠️ Ingresa el ID de la Campaña'}
               </Button>
             </div>
             
