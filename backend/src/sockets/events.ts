@@ -109,6 +109,21 @@ export function setupSocketEvents(io: Server) {
       } catch (e) { console.error(e); }
     });
 
+    socket.on('gm_update_character', async (data: { campaignId: string, characterId: string, updates: any }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        
+        if (character) {
+          character.gmOverrideStats(data.updates);
+          await repo.save(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) {
+        console.error('[Socket] Error GM Update:', e);
+      }
+    });
+
     // Apply damage to a character using the new OOP domain rules
     socket.on('apply_damage', async (data: { campaignId: string, characterId: string, amount: number, type: string }) => {
       const { campaignId, characterId, amount, type } = data;

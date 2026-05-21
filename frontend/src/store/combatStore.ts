@@ -25,6 +25,7 @@ interface CombatStore {
   equipItem: (characterId: string, itemId: string) => void;
   unequipItem: (characterId: string, itemId: string) => void;
   useItem: (characterId: string, itemId: string) => void;
+  gmUpdateCharacter: (characterId: string, updates: any) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -108,6 +109,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('use_item', { campaignId, characterId, itemId });
+    }
+  },
+
+  gmUpdateCharacter: (characterId: string, updates: any) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('gm_update_character', { campaignId, characterId, updates });
     }
   }
 }));

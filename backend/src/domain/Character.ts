@@ -118,6 +118,23 @@ export class Character {
     }
   }
 
+  public gmOverrideStats(updates: { hp?: number, gold?: number }) {
+    if (updates.hp !== undefined) {
+      this.currentHp = updates.hp;
+      if (this.currentHp > this.maxHp) this.currentHp = this.maxHp;
+      if (this.currentHp <= 0) {
+        this.currentHp = 0;
+        this.state = 'INCONSCIENTE';
+      } else if (this.state === 'INCONSCIENTE') {
+        this.state = 'ACTIVO';
+      }
+    }
+    
+    if (updates.gold !== undefined) {
+      this.gold = Math.max(0, updates.gold);
+    }
+  }
+
   /**
    * Aplica la regla oficial de daño de Anima:
    * 10% de reducción de daño por cada punto de TA. Mínimo 1 de daño.
