@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 
+export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';
+
 export interface Character {
   id: string;
   name: string;
@@ -17,7 +19,7 @@ interface CombatStore {
   campaignId: string | null;
   
   connectToCampaign: (campaignId: string) => void;
-  applyDamage: (characterId: string, amount: number, type: string) => void;
+  applyDamage: (characterId: string, amount: number, type: DamageType) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -54,7 +56,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     set({ socket, campaignId });
   },
 
-  applyDamage: (characterId: string, amount: number, type: string) => {
+  applyDamage: (characterId: string, amount: number, type: DamageType) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('apply_damage', {

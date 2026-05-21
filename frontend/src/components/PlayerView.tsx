@@ -4,12 +4,12 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { useCombatStore } from "../store/combatStore";
+import { useCombatStore, DamageType } from "../store/combatStore";
 
 export function PlayerView() {
   const { characters, applyDamage, connectToCampaign } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
-  const [selectedType, setSelectedType] = useState("FIL");
+  const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
@@ -23,8 +23,9 @@ export function PlayerView() {
   const character = characters[CHARACTER_ID];
 
   const handleApplyDamage = () => {
-    if (damageAmount && !isNaN(Number(damageAmount))) {
-      applyDamage(CHARACTER_ID, Number(damageAmount), selectedType);
+    const parsedAmount = parseInt(damageAmount, 10);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      applyDamage(CHARACTER_ID, parsedAmount, selectedType);
       setDamageAmount(""); // Limpiar
       inputRef.current?.select(); // Auto-seleccionar para el siguiente
     }
@@ -105,18 +106,24 @@ export function PlayerView() {
               onChange={(e) => setDamageAmount(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <div className="grid grid-cols-2 gap-2">
-              {['FIL', 'CON', 'PEN', 'CAL'].map(t => (
-                <Button 
-                  key={t}
-                  onClick={() => setSelectedType(t)}
-                  variant={selectedType === t ? "default" : "outline"} 
-                  className={`border-gray-700 hover:bg-gray-800 ${selectedType === t ? 'bg-red-900 hover:bg-red-800 border-red-500 text-white' : ''}`}
-                >
-                  {t}
-                </Button>
-              ))}
+            
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-gray-400 font-semibold mb-1">Tipo de Daño:</label>
+              <select 
+                value={selectedType} 
+                onChange={(e) => setSelectedType(e.target.value as DamageType)}
+                className="w-full bg-gray-900 border border-gray-700 text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <option value="FIL">Filo [FIL]</option>
+                <option value="CON">Contundente [CON]</option>
+                <option value="PEN">Penetración [PEN]</option>
+                <option value="CAL">Calor [CAL]</option>
+                <option value="ELE">Electricidad [ELE]</option>
+                <option value="FRI">Frío [FRI]</option>
+                <option value="ENE">Energía [ENE]</option>
+              </select>
             </div>
+
             <Button onClick={handleApplyDamage} className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg">
               Aplicar Daño
             </Button>

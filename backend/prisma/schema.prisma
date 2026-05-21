@@ -11,54 +11,46 @@ model User {
   id        String     @id @default(uuid())
   email     String     @unique
   name      String
-  campaigns Campaign[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  campaigns Campaign[]
 }
 
 model Campaign {
-  id          String      @id @default(uuid())
-  name        String
-  gmId        String
-  gm          User        @relation(fields: [gmId], references: [id])
-  characters  Character[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         String      @id @default(uuid())
+  name       String
+  gmId       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  gm         User        @relation(fields: [gmId], references: [id])
+  characters Character[]
 }
 
 model Character {
   id              String         @id @default(uuid())
   name            String
   campaignId      String
-  campaign        Campaign       @relation(fields: [campaignId], references: [id])
-  
-  // Define las estadísticas base del personaje
   hp              Int
   max_hp          Int
   ki              Int
   zeon            Int
   initiative_base Int
   gold            Float          @default(0)
-  
-  // Define campos estructurados dinámicos en formato JSON
   resistances     Json
   inventory       Json
   dotes           Json
-  
-  activeEffects   ActiveEffect[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  activeEffects   ActiveEffect[]
+  campaign        Campaign       @relation(fields: [campaignId], references: [id])
 }
 
 model ActiveEffect {
   id              String    @id @default(uuid())
   name            String
   characterId     String
-  character       Character @relation(fields: [characterId], references: [id])
-  
-  // Define los modificadores del efecto en formato JSON
   modifiers       Json
-  
   duration_rounds Int
   createdAt       DateTime  @default(now())
+  character       Character @relation(fields: [characterId], references: [id])
 }
