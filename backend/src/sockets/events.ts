@@ -70,7 +70,10 @@ export function setupSocketEvents(io: Server) {
         state: character.state,
         resistances: character.resistances,
         inventory: character.inventory,
-        activeEffects: character.activeEffects
+        activeEffects: character.activeEffects,
+        ki: character.ki,
+        zeon: character.zeon,
+        temporaryShield: character.temporaryShield
       });
     };
 
@@ -158,7 +161,6 @@ export function setupSocketEvents(io: Server) {
     socket.on('next_round_tick', async (data: { campaignId: string }) => {
       try {
         const repo = new CharacterRepository(prisma);
-        // Obtener todos los personajes de la campaña
         const dbCharacters = await prisma.character.findMany({
           where: { campaignId: data.campaignId }
         });
@@ -172,6 +174,27 @@ export function setupSocketEvents(io: Server) {
           }
         }
         console.log(`[Socket] Next round tick applied for campaign: ${data.campaignId}`);
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('use_character_ability', async (data: { campaignId: string, characterId: string, type: 'KI' | 'ZEON', amount: number }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        if (character) {
+          let success = false;
+          if (data.type === 'KI') {
+            success = character.spendKi(data.amount);
+          } else if (data.type === 'ZEON') {
+            success = character.spendZeon(data.amount);
+          }
+          
+          if (success) {
+            // Solo guardamos en BD el gasto permanente, el shield queda en memoria pero se emite
+            await repo.save(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
+        }
       } catch (e) { console.error(e); }
     });
 

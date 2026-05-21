@@ -53,8 +53,11 @@ function GMCharacterRow({ char, gmUpdateCharacter, applyEffect }: { char: any, g
         </div>
       </TableCell>
       <TableCell>
-        <div className="text-blue-400 text-xs font-semibold">Ki: 0</div>
-        <div className="text-purple-400 text-xs font-semibold mt-1">Zeon: 0</div>
+        <div className="text-blue-400 text-xs font-semibold">Ki: {char.ki || 0}</div>
+        <div className="text-purple-400 text-xs font-semibold mt-1">Zeon: {char.zeon || 0}</div>
+        {char.temporaryShield > 0 && (
+          <div className="text-cyan-400 text-xs font-bold mt-1">🛡️ Escudo: {char.temporaryShield}</div>
+        )}
       </TableCell>
       <TableCell className="text-yellow-500 font-semibold">{char.gold}</TableCell>
       <TableCell>

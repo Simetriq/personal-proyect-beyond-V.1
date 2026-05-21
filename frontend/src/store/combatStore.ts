@@ -11,6 +11,9 @@ export interface Character {
   gold: number;
   inventory: any;
   resistances: Record<string, number>;
+  ki: number;
+  zeon: number;
+  temporaryShield: number;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 }
 
@@ -28,6 +31,7 @@ interface CombatStore {
   gmUpdateCharacter: (characterId: string, updates: any) => void;
   applyEffect: (characterId: string, effect: any) => void;
   nextRoundTick: () => void;
+  useAbility: (characterId: string, type: 'KI' | 'ZEON', amount: number) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -62,6 +66,9 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             resistances: data.resistances || state.characters[data.characterId]?.resistances || {},
             inventory: data.inventory || state.characters[data.characterId]?.inventory || {},
             activeEffects: data.activeEffects || [],
+            ki: data.ki !== undefined ? data.ki : state.characters[data.characterId]?.ki,
+            zeon: data.zeon !== undefined ? data.zeon : state.characters[data.characterId]?.zeon,
+            temporaryShield: data.temporaryShield !== undefined ? data.temporaryShield : state.characters[data.characterId]?.temporaryShield,
             state: data.state as Character['state']
           }
         }
@@ -133,6 +140,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('next_round_tick', { campaignId });
+    }
+  },
+
+  useAbility: (characterId: string, type: 'KI' | 'ZEON', amount: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('use_character_ability', { campaignId, characterId, type, amount });
     }
   }
 }));

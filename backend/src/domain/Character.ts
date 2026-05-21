@@ -35,6 +35,9 @@ export class Character {
   public currentHp: number;
   public maxHp: number;
   public gold: number;
+  public ki: number;
+  public zeon: number;
+  public temporaryShield: number = 0;
   public baseResistances: Resistances;
   public resistances: Resistances;
   public inventory: Record<string, Item>; 
@@ -47,6 +50,8 @@ export class Character {
     this.maxHp = data.max_hp;
     this.currentHp = data.hp;
     this.gold = data.gold;
+    this.ki = data.ki || 0;
+    this.zeon = data.zeon || 0;
     
     // Determinación del estado inicial
     this.state = this.currentHp > 0 ? 'ACTIVO' : 'INCONSCIENTE';
@@ -157,7 +162,7 @@ export class Character {
     }
   }
 
-  public gmOverrideStats(updates: { hp?: number, gold?: number }) {
+  public gmOverrideStats(updates: { hp?: number, gold?: number, ki?: number, zeon?: number }) {
     if (updates.hp !== undefined) {
       this.currentHp = updates.hp;
       if (this.currentHp > this.maxHp) this.currentHp = this.maxHp;
@@ -172,6 +177,35 @@ export class Character {
     if (updates.gold !== undefined) {
       this.gold = Math.max(0, updates.gold);
     }
+    
+    if (updates.ki !== undefined) {
+      this.ki = Math.max(0, updates.ki);
+    }
+    
+    if (updates.zeon !== undefined) {
+      this.zeon = Math.max(0, updates.zeon);
+    }
+  }
+
+  public spendKi(amount: number): boolean {
+    if (this.ki >= amount) {
+      this.ki -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  public spendZeon(amount: number): boolean {
+    if (this.zeon >= amount) {
+      this.zeon -= amount;
+      
+      // Habilidad mística hardcodeada de prueba
+      if (amount === 30) {
+        this.temporaryShield += 50;
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -181,6 +215,19 @@ export class Character {
   applyDirectDamage(amount: number, type: string): void {
     if (amount <= 0 || this.state === 'MUERTO') return;
 
+    let remainingDamage = amount;
+
+    // 1. Intercepción por Escudo Místico
+    if (this.temporaryShield > 0) {
+      if (this.temporaryShield >= remainingDamage) {
+        this.temporaryShield -= remainingDamage;
+        return; // El escudo absorbió todo el daño
+      } else {
+        remainingDamage -= this.temporaryShield;
+        this.temporaryShield = 0;
+      }
+    }
+
     const ta = this.resistances.getResistanceByType(type);
     
     // Reducción del 10% por punto de TA (ej. 3 TA = 30% reducción)
@@ -189,8 +236,8 @@ export class Character {
     // Evitamos reducciones mayores al 100% si TA >= 10
     const effectiveReduction = Math.min(reductionPercentage, 1);
     
-    // Calculamos el daño final (siempre mínimo 1 si el ataque impactó)
-    let finalDamage = amount * (1 - effectiveReduction);
+    // Calculamos el daño final (siempre mínimo 1 si el ataque impactó la armadura)
+    let finalDamage = remainingDamage * (1 - effectiveReduction);
     finalDamage = Math.max(1, Math.round(finalDamage));
 
     this.currentHp -= finalDamage;

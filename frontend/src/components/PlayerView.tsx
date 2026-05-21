@@ -8,7 +8,7 @@ import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,23 +90,39 @@ export function PlayerView() {
               )}
             </div>
             <div>
-              <div className="flex justify-between mb-1">
+              <div className="flex justify-between mb-1 items-center">
                 <span className="font-semibold text-gray-300">Ki</span>
-                <span className="text-blue-400 font-bold">45</span>
+                <div className="flex items-center gap-3">
+                  <Button size="sm" onClick={() => useAbility(CHARACTER_ID, 'KI', 10)} className="h-6 text-xs bg-blue-900 hover:bg-blue-800 text-blue-100 border border-blue-700">Gastar 10 Ki</Button>
+                  <span className="text-blue-400 font-bold">{character.ki || 0}</span>
+                </div>
               </div>
               <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-blue-500 h-3 rounded-full" style={{ width: '60%' }}></div>
+                <div className="bg-blue-500 h-3 rounded-full transition-all" style={{ width: '100%' }}></div>
               </div>
             </div>
             <div>
-              <div className="flex justify-between mb-1">
+              <div className="flex justify-between mb-1 items-center">
                 <span className="font-semibold text-gray-300">Zeon</span>
-                <span className="text-purple-400 font-bold">200</span>
+                <div className="flex items-center gap-3">
+                  <Button size="sm" onClick={() => useAbility(CHARACTER_ID, 'ZEON', 30)} className="h-6 text-xs bg-purple-900 hover:bg-purple-800 text-purple-100 border border-purple-700">Lanzar Escudo (30)</Button>
+                  <span className="text-purple-400 font-bold">{character.zeon || 0}</span>
+                </div>
               </div>
               <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-purple-500 h-3 rounded-full" style={{ width: '100%' }}></div>
+                <div className="bg-purple-500 h-3 rounded-full transition-all" style={{ width: '100%' }}></div>
               </div>
             </div>
+            
+            {character.temporaryShield > 0 && (
+              <div className="mt-4 p-3 bg-cyan-950/80 rounded border border-cyan-500/50 flex items-center justify-between shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛡️</span>
+                  <span className="text-cyan-300 font-bold">Escudo Místico Activo</span>
+                </div>
+                <span className="text-cyan-100 font-bold bg-cyan-900 px-3 py-1 rounded-full">{character.temporaryShield} HP</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
