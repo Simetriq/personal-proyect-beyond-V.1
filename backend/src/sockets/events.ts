@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { processNextTurn, CharacterState } from '../engine/turn';
 import { PrismaClient } from '@prisma/client';
+import { CharacterRepository } from '../repositories/CharacterRepository';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
@@ -23,6 +24,30 @@ export function setupSocketEvents(io: Server) {
         console.log(`[Socket] Stat changed: ${characterId} -> ${stat}: ${value}`);
       } catch (e) {
         console.error(e);
+      }
+    });
+
+    // Apply damage to a character using the new OOP domain rules
+    socket.on('apply_damage', async (data: { campaignId: string, characterId: string, amount: number, type: string }) => {
+      const { campaignId, characterId, amount, type } = data;
+      
+      try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(characterId);
+        
+        if (character) {
+          character.applyDirectDamage(amount, type);
+          await repo.save(character);
+          
+          io.to(campaignId).emit('character_updated', { 
+            characterId: character.id, 
+            hp: character.currentHp,
+            state: character.state
+          });
+          console.log(`[Socket] Damage applied to ${characterId}: ${amount} ${type}. New HP: ${character.currentHp} State: ${character.state}`);
+        }
+      } catch (e) {
+        console.error('[Socket] Error applying damage:', e);
       }
     });
 

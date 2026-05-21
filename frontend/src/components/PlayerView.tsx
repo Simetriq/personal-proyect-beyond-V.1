@@ -1,27 +1,73 @@
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { useCombatStore } from "../store/combatStore";
 
 export function PlayerView() {
+  const { characters, applyDamage, connectToCampaign } = useCombatStore();
+  const [damageAmount, setDamageAmount] = useState("");
+  const [selectedType, setSelectedType] = useState("FIL");
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Use a hardcoded campaign and character for demonstration
+  const CAMPAIGN_ID = "camp-1";
+  const CHARACTER_ID = "char-1";
+
+  useEffect(() => {
+    connectToCampaign(CAMPAIGN_ID);
+  }, [connectToCampaign]);
+
+  const character = characters[CHARACTER_ID];
+
+  const handleApplyDamage = () => {
+    if (damageAmount && !isNaN(Number(damageAmount))) {
+      applyDamage(CHARACTER_ID, Number(damageAmount), selectedType);
+      setDamageAmount(""); // Limpiar
+      inputRef.current?.select(); // Auto-seleccionar para el siguiente
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleApplyDamage();
+    }
+  };
+
+  // Fallbacks if character not loaded yet
+  const hp = character ? character.hp : 150;
+  const maxHp = character ? character.maxHp : 150;
+  const gold = character ? character.gold : 150;
+  const isUnconscious = character?.state === 'INCONSCIENTE';
+
+  const hpPercentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+
   return (
-    <div className="grid grid-cols-12 gap-4 h-full p-4 text-white">
+    <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
       
+      {/* Overlay INCONSCIENTE */}
+      {isUnconscious && (
+        <div className="absolute inset-0 bg-red-700/20 z-50 pointer-events-none rounded-xl animate-pulse transition-all"></div>
+      )}
+
       {/* Panel Izquierdo: Estado Vital */}
       <div className="col-span-3 flex flex-col gap-4">
-        <Card className="border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-card/50">
+        <Card className={`bg-card/50 ${isUnconscious ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)]'}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-red-500">Estado Vital</CardTitle>
+            <CardTitle className="text-xl text-red-500">
+              {isUnconscious ? "¡INCONSCIENTE!" : "Estado Vital"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between mb-1">
                 <span className="font-semibold text-gray-300">HP (Vida)</span>
-                <span className="text-red-400 font-bold">120 / 150</span>
+                <span className="text-red-400 font-bold">{hp} / {maxHp}</span>
               </div>
               <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-red-500 h-3 rounded-full" style={{ width: '80%' }}></div>
+                <div className="bg-red-500 h-3 rounded-full transition-all duration-500" style={{ width: `${hpPercentage}%` }}></div>
               </div>
             </div>
             <div>
@@ -50,20 +96,36 @@ export function PlayerView() {
             <CardTitle className="text-lg">Calculadora de Daño</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            <Input type="number" placeholder="Daño Recibido..." className="text-lg py-6 bg-gray-900 border-gray-700" />
+            <Input 
+              ref={inputRef}
+              type="number" 
+              placeholder="Daño Recibido..." 
+              className="text-lg py-6 bg-gray-900 border-gray-700" 
+              value={damageAmount}
+              onChange={(e) => setDamageAmount(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" className="border-gray-700 hover:bg-gray-800">Filo</Button>
-              <Button variant="outline" className="border-gray-700 hover:bg-gray-800">Contundente</Button>
-              <Button variant="outline" className="border-gray-700 hover:bg-gray-800">Penetrante</Button>
-              <Button variant="outline" className="border-gray-700 hover:bg-gray-800">Calor</Button>
+              {['FIL', 'CON', 'PEN', 'CAL'].map(t => (
+                <Button 
+                  key={t}
+                  onClick={() => setSelectedType(t)}
+                  variant={selectedType === t ? "default" : "outline"} 
+                  className={`border-gray-700 hover:bg-gray-800 ${selectedType === t ? 'bg-red-900 hover:bg-red-800 border-red-500 text-white' : ''}`}
+                >
+                  {t}
+                </Button>
+              ))}
             </div>
-            <Button className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg">Aplicar Daño</Button>
+            <Button onClick={handleApplyDamage} className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-6 text-lg">
+              Aplicar Daño
+            </Button>
           </CardContent>
         </Card>
       </div>
 
       {/* Panel Central: Inventario y Tienda */}
-      <div className="col-span-6 h-full">
+      <div className="col-span-6 h-full z-10">
         <Card className="h-full border-gray-800 flex flex-col bg-card/50">
           <Tabs defaultValue="inventory" className="w-full h-full flex flex-col">
             <CardHeader className="pb-0 pt-4 border-b border-gray-800">
@@ -77,7 +139,7 @@ export function PlayerView() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-semibold">Equipamiento</h3>
                   <span className="text-yellow-500 font-bold flex items-center gap-2">
-                    💰 150 Oro
+                    💰 {gold} Oro
                   </span>
                 </div>
                 <Table>
@@ -96,13 +158,6 @@ export function PlayerView() {
                         <Button size="sm" variant="secondary" className="bg-gray-800 hover:bg-gray-700">Consumir</Button>
                       </TableCell>
                     </TableRow>
-                    <TableRow className="border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                      <TableCell className="font-medium text-gray-200">Ración de Viaje</TableCell>
-                      <TableCell className="text-gray-300">5</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="secondary" className="bg-gray-800 hover:bg-gray-700">Consumir</Button>
-                      </TableCell>
-                    </TableRow>
                   </TableBody>
                 </Table>
               </TabsContent>
@@ -117,7 +172,7 @@ export function PlayerView() {
       </div>
 
       {/* Panel Derecho: Alertas */}
-      <div className="col-span-3 flex flex-col gap-4">
+      <div className="col-span-3 flex flex-col gap-4 z-10">
         <Card className="border-yellow-500/30 bg-card/50">
           <CardHeader>
             <CardTitle className="text-lg text-yellow-500 flex items-center gap-2">
@@ -125,12 +180,13 @@ export function PlayerView() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-             {/* Mock alert */}
-            <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-md animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.1)]">
-              <p className="text-red-400 font-semibold text-sm">
-                ¡Salud Crítica! (Menos del 30%). Recuerda activar tu dote de supervivencia si recibes otro ataque mortal.
-              </p>
-            </div>
+            {isUnconscious && (
+              <div className="p-3 bg-red-950/80 border border-red-500/80 rounded-md animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                <p className="text-red-300 font-bold text-sm">
+                  ¡ESTÁS INCONSCIENTE! Tus puntos de vida han llegado a 0. No puedes realizar acciones hasta ser curado.
+                </p>
+              </div>
+            )}
             
             <div>
               <h4 className="font-semibold text-gray-400 text-sm mb-2">Efectos Activos</h4>
