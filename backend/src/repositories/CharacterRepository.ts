@@ -73,7 +73,8 @@ export class CharacterRepository {
           FRI: character.baseResistances.FRI,
           ENE: character.baseResistances.ENE
         },
-        inventory: character.inventory ? JSON.parse(JSON.stringify(character.inventory)) : {}
+        inventory: character.inventory ? JSON.parse(JSON.stringify(character.inventory)) : {},
+        dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : []
       }
     });
   }

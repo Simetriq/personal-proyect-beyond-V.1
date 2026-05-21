@@ -12,6 +12,14 @@ export interface ItemModifier {
   ENE?: number;
 }
 
+export interface ActiveEffect {
+  id: string;
+  name: string;
+  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR';
+  value: number;
+  durationRounds: number;
+}
+
 export interface Item {
   id: string;
   name: string;
@@ -30,6 +38,7 @@ export class Character {
   public baseResistances: Resistances;
   public resistances: Resistances;
   public inventory: Record<string, Item>; 
+  public activeEffects: ActiveEffect[];
   public state: CharacterState;
 
   constructor(data: any) {
@@ -51,9 +60,39 @@ export class Character {
     // Inicializamos el inventario
     this.inventory = data.inventory || {};
     
+    // Inicializamos estados activos guardados en 'dotes' o como 'activeEffects' directos
+    this.activeEffects = data.dotes || data.activeEffects || [];
+    
     // Calculamos las resistencias totales (base + equipamiento)
     this.resistances = new Resistances();
     this.recalculateResistances();
+  }
+
+  public addEffect(effect: ActiveEffect) {
+    this.activeEffects.push(effect);
+  }
+
+  public tickEffects(): void {
+    const remainingEffects: ActiveEffect[] = [];
+
+    for (const effect of this.activeEffects) {
+      if (effect.type === 'SANGRADO' || effect.type === 'VENENO') {
+        this.currentHp -= effect.value;
+      }
+
+      effect.durationRounds -= 1;
+
+      if (effect.durationRounds > 0) {
+        remainingEffects.push(effect);
+      }
+    }
+
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
+      this.state = 'INCONSCIENTE';
+    }
+
+    this.activeEffects = remainingEffects;
   }
 
   private recalculateResistances() {

@@ -75,6 +75,19 @@ export function PlayerView() {
               <div className="w-full bg-gray-800 rounded-full h-3">
                 <div className="bg-red-500 h-3 rounded-full transition-all duration-500" style={{ width: `${hpPercentage}%` }}></div>
               </div>
+              
+              {/* Badges de Efectos Activos bajo la vida */}
+              {character.activeEffects && character.activeEffects.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {character.activeEffects.map((effect: any) => (
+                    <span key={effect.id} className="bg-red-950/80 text-red-300 text-xs px-2 py-1 rounded border border-red-900 shadow-sm flex items-center">
+                      {effect.type === 'SANGRADO' ? '🩸' : effect.type === 'VENENO' ? '🤢' : '⚠️'} 
+                      <span className="ml-1 font-bold">{effect.name}</span>
+                      <span className="ml-1 opacity-80">- {effect.value} PV ({effect.durationRounds} asaltos)</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex justify-between mb-1">
@@ -222,11 +235,19 @@ export function PlayerView() {
             )}
             
             <div>
-              <h4 className="font-semibold text-gray-400 text-sm mb-2">Efectos Activos</h4>
-              <div className="text-sm p-3 bg-gray-900/80 rounded border border-gray-800 text-gray-300 shadow-inner">
-                <span className="text-blue-400 font-bold mr-2">Celeridad</span>
-                +20 Iniciativa (2 asaltos restantes)
-              </div>
+              <h4 className="font-semibold text-gray-400 text-sm mb-2">Registro de Efectos</h4>
+              {character.activeEffects && character.activeEffects.length > 0 ? (
+                character.activeEffects.map((effect: any) => (
+                  <div key={effect.id} className="text-sm p-3 bg-gray-900/80 rounded border border-red-900/50 text-gray-300 shadow-inner mb-2">
+                    <span className="text-red-400 font-bold mr-2">{effect.name}</span>
+                    Dañará {effect.value} HP ({effect.durationRounds} asaltos restantes)
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm p-3 bg-gray-900/80 rounded border border-gray-800 text-gray-500 shadow-inner italic">
+                  No tienes efectos negativos activos.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

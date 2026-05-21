@@ -26,6 +26,8 @@ interface CombatStore {
   unequipItem: (characterId: string, itemId: string) => void;
   useItem: (characterId: string, itemId: string) => void;
   gmUpdateCharacter: (characterId: string, updates: any) => void;
+  applyEffect: (characterId: string, effect: any) => void;
+  nextRoundTick: () => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -59,6 +61,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             gold: data.gold !== undefined ? data.gold : state.characters[data.characterId]?.gold,
             resistances: data.resistances || state.characters[data.characterId]?.resistances || {},
             inventory: data.inventory || state.characters[data.characterId]?.inventory || {},
+            activeEffects: data.activeEffects || [],
             state: data.state as Character['state']
           }
         }
@@ -116,6 +119,20 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('gm_update_character', { campaignId, characterId, updates });
+    }
+  },
+
+  applyEffect: (characterId: string, effect: any) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('apply_effect', { campaignId, characterId, effect });
+    }
+  },
+
+  nextRoundTick: () => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('next_round_tick', { campaignId });
     }
   }
 }));

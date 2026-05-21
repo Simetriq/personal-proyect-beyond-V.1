@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Input } from "./ui/input";
+import { v4 as uuidv4 } from "uuid";
 import { useCombatStore } from "../store/combatStore";
 
-function GMCharacterRow({ char, gmUpdateCharacter }: { char: any, gmUpdateCharacter: any }) {
+function GMCharacterRow({ char, gmUpdateCharacter, applyEffect }: { char: any, gmUpdateCharacter: any, applyEffect: any }) {
   const [hp, setHp] = useState(char.hp);
   const [gold, setGold] = useState(char.gold);
   
@@ -21,6 +21,17 @@ function GMCharacterRow({ char, gmUpdateCharacter }: { char: any, gmUpdateCharac
       hp: parseInt(hp, 10), 
       gold: parseInt(gold, 10) 
     });
+  };
+
+  const handleAddBleed = () => {
+    const effect = {
+      id: uuidv4(),
+      name: "Corte Profundo",
+      type: "SANGRADO",
+      value: 5,
+      durationRounds: 3
+    };
+    applyEffect(char.id, effect);
   };
 
   const isUnconscious = char.state === 'INCONSCIENTE';
@@ -52,6 +63,7 @@ function GMCharacterRow({ char, gmUpdateCharacter }: { char: any, gmUpdateCharac
         )}
       </TableCell>
       <TableCell className="text-right">
+        <Button onClick={handleAddBleed} variant="outline" size="sm" className="border-red-900 bg-red-950 hover:bg-red-900 text-red-300 mr-2">Sangrar</Button>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-300">Editar</Button>
@@ -83,7 +95,7 @@ function GMCharacterRow({ char, gmUpdateCharacter }: { char: any, gmUpdateCharac
 }
 
 export function GMView() {
-  const { characters, connectToCampaign, gmUpdateCharacter } = useCombatStore();
+  const { characters, connectToCampaign, gmUpdateCharacter, applyEffect, nextRoundTick } = useCombatStore();
   const CAMPAIGN_ID = "camp-1";
 
   useEffect(() => {
@@ -100,7 +112,7 @@ export function GMView() {
           <h1 className="text-2xl font-bold text-white tracking-wide">Consola de Director de Juego</h1>
           <p className="text-gray-400 text-sm mt-1">Campaña: La Sombra del Omega</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold transition-all hover:scale-105">
+        <Button onClick={nextRoundTick} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold transition-all hover:scale-105">
           Siguiente Asalto ⏩
         </Button>
       </div>
@@ -131,7 +143,7 @@ export function GMView() {
                 </TableRow>
               ) : (
                 charList.map(char => (
-                  <GMCharacterRow key={char.id} char={char} gmUpdateCharacter={gmUpdateCharacter} />
+                  <GMCharacterRow key={char.id} char={char} gmUpdateCharacter={gmUpdateCharacter} applyEffect={applyEffect} />
                 ))
               )}
             </TableBody>

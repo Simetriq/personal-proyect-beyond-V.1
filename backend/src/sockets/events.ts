@@ -69,7 +69,8 @@ export function setupSocketEvents(io: Server) {
         gold: character.gold,
         state: character.state,
         resistances: character.resistances,
-        inventory: character.inventory
+        inventory: character.inventory,
+        activeEffects: character.activeEffects
       });
     };
 
@@ -131,65 +132,47 @@ export function setupSocketEvents(io: Server) {
       try {
         const repo = new CharacterRepository(prisma);
         const character = await repo.findById(characterId);
-        
+
         if (character) {
           character.applyDirectDamage(amount, type);
           await repo.save(character);
-          
-          io.to(campaignId).emit('character_updated', { 
-            characterId: character.id, 
-            hp: character.currentHp,
-            state: character.state
-          });
-          console.log(`[Socket] Damage applied to ${characterId}: ${amount} ${type}. New HP: ${character.currentHp} State: ${character.state}`);
+          broadcastCharacterUpdate(campaignId, character);
         }
       } catch (e) {
         console.error('[Socket] Error applying damage:', e);
       }
     });
 
-    // Avanza el turno, calcula regeneraciones y actualiza la base de datos
-    socket.on('next_round_tick', async (campaignId: string) => {
+    socket.on('apply_effect', async (data: { campaignId: string, characterId: string, effect: any }) => {
       try {
+        const repo = new CharacterRepository(prisma);
+        const character = await repo.findById(data.characterId);
+        if (character) {
+          character.addEffect(data.effect);
+          await repo.save(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('next_round_tick', async (data: { campaignId: string }) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        // Obtener todos los personajes de la campaña
         const dbCharacters = await prisma.character.findMany({
-          where: { campaignId },
-          include: { activeEffects: true }
+          where: { campaignId: data.campaignId }
         });
 
-        if (dbCharacters.length === 0) return;
-
-        const charactersState: CharacterState[] = dbCharacters.map(c => ({
-          id: c.id,
-          hp: c.hp,
-          max_hp: c.max_hp,
-          ki: c.ki,
-          zeon: c.zeon,
-          activeEffects: c.activeEffects.map(e => ({
-            id: e.id,
-            modifiers: e.modifiers,
-            duration_rounds: e.duration_rounds
-          })),
-          dotes: c.dotes as any[]
-        }));
-
-        const updatedCharacters = processNextTurn(charactersState);
-
-        for (const char of updatedCharacters) {
-          await prisma.character.update({
-            where: { id: char.id },
-            data: {
-              hp: char.hp,
-              ki: char.ki,
-              zeon: char.zeon
-            }
-          });
+        for (const dbChar of dbCharacters) {
+          const character = await repo.findById(dbChar.id);
+          if (character) {
+            character.tickEffects();
+            await repo.save(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
         }
-
-        io.to(campaignId).emit('round_processed', updatedCharacters);
-        console.log(`[Socket] Next round processed for campaign ${campaignId}`);
-      } catch (error) {
-        console.error('[Socket] Error in next_round_tick:', error);
-      }
+        console.log(`[Socket] Next round tick applied for campaign: ${data.campaignId}`);
+      } catch (e) { console.error(e); }
     });
 
     // Maneja la desconexión del socket
