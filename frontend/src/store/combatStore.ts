@@ -10,6 +10,7 @@ export interface Character {
   maxHp: number;
   gold: number;
   inventory: any;
+  resistances: Record<string, number>;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 }
 
@@ -20,6 +21,7 @@ interface CombatStore {
   
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
+  createCharacter: (campaignId: string, characterId: string, data: any) => void;
 }
 
 const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
@@ -39,14 +41,20 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       socket.emit('join_campaign', campaignId);
     });
 
-    socket.on('character_updated', (data: { characterId: string, hp: number, state: string }) => {
+    socket.on('character_updated', (data: any) => {
       console.log('Personaje actualizado:', data);
       set((state) => ({
         characters: {
           ...state.characters,
           [data.characterId]: {
             ...state.characters[data.characterId],
+            id: data.characterId,
+            name: data.name || state.characters[data.characterId]?.name || 'Unknown',
             hp: data.hp,
+            maxHp: data.maxHp || state.characters[data.characterId]?.maxHp || 0,
+            gold: data.gold !== undefined ? data.gold : state.characters[data.characterId]?.gold,
+            resistances: data.resistances || state.characters[data.characterId]?.resistances || {},
+            inventory: data.inventory || state.characters[data.characterId]?.inventory || {},
             state: data.state as Character['state']
           }
         }
@@ -64,6 +72,17 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         characterId,
         amount,
         type
+      });
+    }
+  },
+
+  createCharacter: (campaignId: string, characterId: string, data: any) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('create_character', {
+        campaignId,
+        characterId,
+        ...data
       });
     }
   }

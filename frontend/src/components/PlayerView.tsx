@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { useCombatStore, type DamageType } from "../store/combatStore";
+import { CreateCharacterForm } from "./CreateCharacterForm";
 
 export function PlayerView() {
   const { characters, applyDamage, connectToCampaign } = useCombatStore();
@@ -37,11 +38,15 @@ export function PlayerView() {
     }
   };
 
+  if (!character) {
+    return <CreateCharacterForm campaignId={CAMPAIGN_ID} characterId={CHARACTER_ID} />;
+  }
+
   // Fallbacks if character not loaded yet
-  const hp = character ? character.hp : 150;
-  const maxHp = character ? character.maxHp : 150;
-  const gold = character ? character.gold : 150;
-  const isUnconscious = character?.state === 'INCONSCIENTE';
+  const hp = character.hp;
+  const maxHp = character.maxHp;
+  const gold = character.gold;
+  const isUnconscious = character.state === 'INCONSCIENTE';
 
   const hpPercentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
 

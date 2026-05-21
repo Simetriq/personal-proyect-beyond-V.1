@@ -27,6 +27,39 @@ export function setupSocketEvents(io: Server) {
       }
     });
 
+    // Create a new character and broadcast to campaign
+    socket.on('create_character', async (data) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        
+        const character = await repo.create({
+          id: data.characterId,
+          campaignId: data.campaignId,
+          name: data.name,
+          maxHp: data.maxHp,
+          gold: data.gold,
+          ki: data.ki,
+          zeon: data.zeon,
+          resistances: data.resistances
+        });
+
+        io.to(data.campaignId).emit('character_updated', {
+          characterId: character.id,
+          name: character.name,
+          hp: character.currentHp,
+          maxHp: character.maxHp,
+          gold: character.gold,
+          state: character.state,
+          resistances: data.resistances,
+          inventory: {}
+        });
+        
+        console.log(`[Socket] Character created: ${character.name}`);
+      } catch (e) {
+        console.error('[Socket] Error creating character:', e);
+      }
+    });
+
     // Apply damage to a character using the new OOP domain rules
     socket.on('apply_damage', async (data: { campaignId: string, characterId: string, amount: number, type: string }) => {
       const { campaignId, characterId, amount, type } = data;
