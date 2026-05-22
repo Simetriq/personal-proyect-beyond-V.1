@@ -15,7 +15,7 @@ export interface ItemModifier {
 export interface ActiveEffect {
   id: string;
   name: string;
-  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR';
+  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA';
   value: number;
   durationRounds: number;
 }
@@ -76,6 +76,9 @@ export class Character {
 
   public addEffect(effect: ActiveEffect) {
     this.activeEffects.push(effect);
+    if (effect.type === 'BUF_TA') {
+      this.recalculateResistances();
+    }
   }
 
   public tickEffects(): void {
@@ -99,6 +102,7 @@ export class Character {
     }
 
     this.activeEffects = remainingEffects;
+    this.recalculateResistances();
   }
 
   private recalculateResistances() {
@@ -121,6 +125,19 @@ export class Character {
         ELE += item.modifiers.ELE || 0;
         FRI += item.modifiers.FRI || 0;
         ENE += item.modifiers.ENE || 0;
+      }
+    }
+
+    // Sumar modificadores de bufos activos
+    for (const effect of this.activeEffects) {
+      if (effect.type === 'BUF_TA') {
+        FIL += effect.value;
+        CON += effect.value;
+        PEN += effect.value;
+        CAL += effect.value;
+        ELE += effect.value;
+        FRI += effect.value;
+        ENE += effect.value;
       }
     }
 

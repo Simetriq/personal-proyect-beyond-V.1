@@ -141,7 +141,6 @@ export function PlayerView() {
               <div className="flex justify-between mb-1 items-center">
                 <span className="font-semibold text-gray-300">Ki</span>
                 <div className="flex items-center gap-3">
-                  <Button size="sm" onClick={() => useAbility(CHARACTER_ID, 'KI', 10)} className="h-6 text-xs bg-blue-900 hover:bg-blue-800 text-blue-100 border border-blue-700">Gastar 10 Ki</Button>
                   <span className="text-blue-400 font-bold">{character.ki || 0}</span>
                 </div>
               </div>
@@ -153,7 +152,6 @@ export function PlayerView() {
               <div className="flex justify-between mb-1 items-center">
                 <span className="font-semibold text-gray-300">Zeon</span>
                 <div className="flex items-center gap-3">
-                  <Button size="sm" onClick={() => useAbility(CHARACTER_ID, 'ZEON', 30)} className="h-6 text-xs bg-purple-900 hover:bg-purple-800 text-purple-100 border border-purple-700">Lanzar Escudo (30)</Button>
                   <span className="text-purple-400 font-bold">{character.zeon || 0}</span>
                 </div>
               </div>
@@ -173,6 +171,39 @@ export function PlayerView() {
             )}
           </CardContent>
         </Card>
+
+        {character.maxZeon > 0 && (
+          <Card className="bg-card/50 border-purple-900/50">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-lg text-purple-400 flex items-center gap-2">
+                📖 Grimorio Místico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Button onClick={() => useAbility(CHARACTER_ID, CHARACTER_ID, 'ESCUDO_MISTICO')} variant="outline" className="w-full justify-start border-purple-800 text-purple-300 hover:bg-purple-950 hover:text-purple-200 transition-all active:scale-95 duration-100">
+                🛡️ Escudo Místico (30 Zeon)
+              </Button>
+              <Button onClick={() => useAbility(CHARACTER_ID, targetId, 'FUEGO_DEL_CAOS')} variant="outline" className="w-full justify-start border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300 transition-all active:scale-95 duration-100">
+                🔥 Fuego del Caos (25 Zeon) - Usa Objetivo
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {character.maxKi > 0 && (
+          <Card className="bg-card/50 border-blue-900/50">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
+                🥋 Técnicas de Ki
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Button onClick={() => useAbility(CHARACTER_ID, CHARACTER_ID, 'PIEL_DE_HIERRO')} variant="outline" className="w-full justify-start border-blue-800 text-blue-300 hover:bg-blue-950 hover:text-blue-200 transition-all active:scale-95 duration-100">
+                💪 Piel de Hierro (15 Ki)
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="bg-card/50">
           <CardHeader className="pb-2">

@@ -268,22 +268,45 @@ export function setupSocketEvents(io: Server) {
       broadcastCombatState(data.campaignId);
     });
 
-    socket.on('use_character_ability', async (data: { campaignId: string, characterId: string, type: 'KI' | 'ZEON', amount: number }) => {
+    socket.on('use_character_ability', async (data: { campaignId: string, sourceId: string, targetId: string, abilityName: string }) => {
       try {
-        const character = await loadCharacter(data.campaignId, data.characterId);
-        if (character) {
-          let success = false;
-          if (data.type === 'KI') {
-            success = character.spendKi(data.amount);
-          } else if (data.type === 'ZEON') {
-            success = character.spendZeon(data.amount);
+        const sourceChar = await loadCharacter(data.campaignId, data.sourceId);
+        if (!sourceChar) return;
+
+        let success = false;
+
+        if (data.abilityName === 'ESCUDO_MISTICO') {
+          if (sourceChar.spendZeon(30)) {
+            sourceChar.temporaryShield += 50;
+            success = true;
           }
-          
-          if (success) {
-            // Solo guardamos en BD el gasto permanente, el shield queda en memoria pero se emite
-            await saveCharacter(character);
-            broadcastCharacterUpdate(data.campaignId, character);
+        } else if (data.abilityName === 'PIEL_DE_HIERRO') {
+          if (sourceChar.spendKi(15)) {
+            sourceChar.addEffect({
+              id: Date.now().toString(),
+              name: 'Piel de Hierro',
+              type: 'BUF_TA',
+              value: 2,
+              durationRounds: 1
+            });
+            success = true;
           }
+        } else if (data.abilityName === 'FUEGO_DEL_CAOS') {
+          if (sourceChar.spendZeon(25)) {
+            success = true;
+            // Daño directo cruzado
+            const targetChar = await loadCharacter(data.campaignId, data.targetId);
+            if (targetChar) {
+              targetChar.applyDirectDamage(40, 'CAL');
+              await saveCharacter(targetChar);
+              broadcastCharacterUpdate(data.campaignId, targetChar);
+            }
+          }
+        }
+
+        if (success) {
+          await saveCharacter(sourceChar);
+          broadcastCharacterUpdate(data.campaignId, sourceChar);
         }
       } catch (e) { console.error(e); }
     });
