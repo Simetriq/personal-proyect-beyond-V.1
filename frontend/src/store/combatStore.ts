@@ -29,8 +29,10 @@ interface CombatStore {
   socket: Socket | null;
   characters: Record<string, Character>;
   campaignId: string | null;
+  myCharacterId: string | null;
   combatState: CombatState;
   
+  setMyCharacterId: (id: string) => void;
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
   createCharacter: (campaignId: string, characterId: string, data: any) => void;
@@ -54,12 +56,15 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   socket: null,
   characters: {},
   campaignId: null,
+  myCharacterId: null,
   combatState: {
     round: 1,
     turnIndex: -1,
     initiativeQueue: [],
     isRequestingInitiative: false
   },
+
+  setMyCharacterId: (id: string) => set({ myCharacterId: id }),
 
   connectToCampaign: (campaignId: string) => {
     if (get().socket) return;

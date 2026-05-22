@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useCombatStore } from "../store/combatStore";
+import { v4 as uuidv4 } from "uuid";
 
 interface CreateCharacterFormProps {
   campaignId: string;
-  characterId: string;
 }
 
-export function CreateCharacterForm({ campaignId, characterId }: CreateCharacterFormProps) {
-  const { createCharacter, connectToCampaign } = useCombatStore();
+export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
+  const { createCharacter, connectToCampaign, setMyCharacterId } = useCombatStore();
 
   useEffect(() => {
     connectToCampaign(campaignId);
@@ -57,7 +57,9 @@ export function CreateCharacterForm({ campaignId, characterId }: CreateCharacter
       }
     };
 
-    createCharacter(localCampaignId, characterId, data);
+    const newId = uuidv4();
+    createCharacter(localCampaignId, newId, data);
+    setMyCharacterId(newId);
   };
 
   return (

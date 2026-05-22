@@ -8,22 +8,22 @@ import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
-  const [targetId, setTargetId] = useState<string>("char-1");
+  const [targetId, setTargetId] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
   const CAMPAIGN_ID = "camp-1";
-  const CHARACTER_ID = "char-1";
+  const CHARACTER_ID = myCharacterId;
 
   useEffect(() => {
     connectToCampaign(CAMPAIGN_ID);
   }, [connectToCampaign]);
 
-  const character = characters[CHARACTER_ID];
+  const character = CHARACTER_ID ? characters[CHARACTER_ID] : null;
 
   const handleApplyDamage = () => {
     const parsedAmount = parseInt(damageAmount, 10);
@@ -36,7 +36,7 @@ export function PlayerView() {
 
   const handleSubmitInitiative = () => {
     const val = parseInt(initiativeInput, 10);
-    if (!isNaN(val)) {
+    if (!isNaN(val) && CHARACTER_ID) {
       submitInitiative(CHARACTER_ID, val);
       setInitiativeInput("");
     }
@@ -48,8 +48,8 @@ export function PlayerView() {
     }
   };
 
-  if (!character) {
-    return <CreateCharacterForm campaignId={CAMPAIGN_ID} characterId={CHARACTER_ID} />;
+  if (!character || !CHARACTER_ID) {
+    return <CreateCharacterForm campaignId={CAMPAIGN_ID} />;
   }
 
   // Fallbacks if character not loaded yet
