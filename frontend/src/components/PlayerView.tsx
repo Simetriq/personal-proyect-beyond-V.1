@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
+import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 
 export function PlayerView() {
   const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId } = useCombatStore();
@@ -180,12 +181,25 @@ export function PlayerView() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              <Button onClick={() => useAbility(CHARACTER_ID, CHARACTER_ID, 'ESCUDO_MISTICO')} variant="outline" className="w-full justify-start border-purple-800 text-purple-300 hover:bg-purple-950 hover:text-purple-200 transition-all active:scale-95 duration-100">
-                🛡️ Escudo Místico (30 Zeon)
-              </Button>
-              <Button onClick={() => useAbility(CHARACTER_ID, targetId, 'FUEGO_DEL_CAOS')} variant="outline" className="w-full justify-start border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300 transition-all active:scale-95 duration-100">
-                🔥 Fuego del Caos (25 Zeon) - Usa Objetivo
-              </Button>
+              {Object.values(MAGIC_SPELLS).map(spell => {
+                const target = spell.target === 'ENEMY' ? targetId : CHARACTER_ID;
+                const isAttack = spell.type === 'DAMAGE' || spell.type === 'EFFECT';
+                const borderColor = isAttack ? 'border-red-800' : 'border-purple-800';
+                const textColor = isAttack ? 'text-red-400' : 'text-purple-300';
+                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-purple-950';
+                const icon = isAttack ? '🔥' : '🛡️';
+                const extraText = spell.target === 'ENEMY' ? ' - Usa Objetivo' : '';
+                return (
+                  <Button 
+                    key={spell.id}
+                    onClick={() => useAbility(CHARACTER_ID, target, spell.id)} 
+                    variant="outline" 
+                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100`}
+                  >
+                    {icon} {spell.name} ({spell.cost} Zeon){extraText}
+                  </Button>
+                );
+              })}
             </CardContent>
           </Card>
         )}
@@ -198,9 +212,25 @@ export function PlayerView() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              <Button onClick={() => useAbility(CHARACTER_ID, CHARACTER_ID, 'PIEL_DE_HIERRO')} variant="outline" className="w-full justify-start border-blue-800 text-blue-300 hover:bg-blue-950 hover:text-blue-200 transition-all active:scale-95 duration-100">
-                💪 Piel de Hierro (15 Ki)
-              </Button>
+              {Object.values(KI_ABILITIES).map(tech => {
+                const target = tech.target === 'ENEMY' ? targetId : CHARACTER_ID;
+                const isAttack = tech.type === 'DAMAGE' || tech.type === 'EFFECT';
+                const borderColor = isAttack ? 'border-red-800' : 'border-blue-800';
+                const textColor = isAttack ? 'text-red-400' : 'text-blue-300';
+                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-blue-950';
+                const icon = isAttack ? '💥' : '💪';
+                const extraText = tech.target === 'ENEMY' ? ' - Usa Objetivo' : '';
+                return (
+                  <Button 
+                    key={tech.id}
+                    onClick={() => useAbility(CHARACTER_ID, target, tech.id)} 
+                    variant="outline" 
+                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100`}
+                  >
+                    {icon} {tech.name} ({tech.cost} Ki){extraText}
+                  </Button>
+                );
+              })}
             </CardContent>
           </Card>
         )}

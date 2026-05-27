@@ -42,7 +42,7 @@ interface CombatStore {
   gmUpdateCharacter: (characterId: string, updates: any) => void;
   applyEffect: (characterId: string, effect: any) => void;
   nextRoundTick: () => void;
-  useAbility: (sourceId: string, targetId: string, abilityName: string) => void;
+  useAbility: (sourceId: string, targetId: string, abilityKey: string) => void;
   requestInitiatives: () => void;
   submitInitiative: (characterId: string, initiative: number) => void;
   nextTurn: () => void;
@@ -181,10 +181,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  useAbility: (sourceId: string, targetId: string, abilityName: string) => {
+  useAbility: (sourceId: string, targetId: string, abilityKey: string) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
-      socket.emit('use_character_ability', { campaignId, sourceId, targetId, abilityName });
+      socket.emit('use_character_ability', { campaignId, sourceId, targetId, abilityKey });
     }
   },
 

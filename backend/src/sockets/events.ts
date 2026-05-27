@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { processNextTurn, CharacterState } from '../engine/turn';
 import { PrismaClient } from '@prisma/client';
 import { CharacterRepository } from '../repositories/CharacterRepository';
+import { ABILITIES_REGISTRY } from '../domain/abilitiesRegistry';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
@@ -268,43 +269,52 @@ export function setupSocketEvents(io: Server) {
       broadcastCombatState(data.campaignId);
     });
 
-    socket.on('use_character_ability', async (data: { campaignId: string, sourceId: string, targetId: string, abilityName: string }) => {
+    socket.on('use_character_ability', async (data: { campaignId: string, sourceId: string, targetId: string, abilityKey: string }) => {
       try {
         const sourceChar = await loadCharacter(data.campaignId, data.sourceId);
         if (!sourceChar) return;
 
+        const ability = ABILITIES_REGISTRY[data.abilityKey];
+        if (!ability) return;
+
         let success = false;
 
-        if (data.abilityName === 'ESCUDO_MISTICO') {
-          if (sourceChar.spendZeon(30)) {
-            sourceChar.temporaryShield += 50;
-            success = true;
-          }
-        } else if (data.abilityName === 'PIEL_DE_HIERRO') {
-          if (sourceChar.spendKi(15)) {
-            sourceChar.addEffect({
-              id: Date.now().toString(),
-              name: 'Piel de Hierro',
-              type: 'BUF_TA',
-              value: 2,
-              durationRounds: 1
-            });
-            success = true;
-          }
-        } else if (data.abilityName === 'FUEGO_DEL_CAOS') {
-          if (sourceChar.spendZeon(25)) {
-            success = true;
-            // Daño directo cruzado
+        // Verificar y gastar el recurso
+        if (ability.resource === 'KI') {
+          success = sourceChar.spendKi(ability.cost);
+        } else if (ability.resource === 'ZEON') {
+          success = sourceChar.spendZeon(ability.cost);
+        }
+
+        if (success) {
+          if (ability.type === 'SHIELD') {
+            sourceChar.temporaryShield += ability.effect.value;
+          } else if (ability.type === 'BUFF_STAT' || ability.type === 'EFFECT') {
+            const targetChar = ability.target === 'SELF' ? sourceChar : await loadCharacter(data.campaignId, data.targetId);
+            if (targetChar) {
+              targetChar.addEffect({
+                id: Date.now().toString(),
+                name: ability.name,
+                type: ability.effect.effectType || 'PENALIZADOR',
+                value: ability.effect.value,
+                durationRounds: ability.effect.durationRounds || 1,
+                statName: ability.effect.statName
+              });
+              if (ability.target !== 'SELF') {
+                await saveCharacter(targetChar);
+                broadcastCharacterUpdate(data.campaignId, targetChar);
+              }
+            }
+          } else if (ability.type === 'DAMAGE') {
             const targetChar = await loadCharacter(data.campaignId, data.targetId);
             if (targetChar) {
-              targetChar.applyDirectDamage(40, 'CAL');
+              targetChar.applyDirectDamage(ability.effect.value, ability.effect.damageType || 'CON');
               await saveCharacter(targetChar);
               broadcastCharacterUpdate(data.campaignId, targetChar);
             }
           }
-        }
 
-        if (success) {
+          // Guardar y emitir el source (quien gasta el recurso o recibe el buff/shield)
           await saveCharacter(sourceChar);
           broadcastCharacterUpdate(data.campaignId, sourceChar);
         }

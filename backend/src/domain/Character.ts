@@ -15,9 +15,10 @@ export interface ItemModifier {
 export interface ActiveEffect {
   id: string;
   name: string;
-  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA';
+  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA' | 'BUF_STAT';
   value: number;
   durationRounds: number;
+  statName?: string; // Para identificar qué stat afecta (ej. 'FUE', 'DES')
 }
 
 export interface Item {

@@ -37,7 +37,7 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
     setResistances(prev => ({ ...prev, [type]: val }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const data = {
