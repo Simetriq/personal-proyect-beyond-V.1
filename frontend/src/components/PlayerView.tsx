@@ -7,13 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
+import { KiTree } from "./KiTree";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
   const [targetId, setTargetId] = useState<string>("");
+  const [fatigue, setFatigue] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
@@ -160,6 +162,17 @@ export function PlayerView() {
                 <div className="bg-purple-500 h-3 rounded-full transition-all" style={{ width: '100%' }}></div>
               </div>
             </div>
+
+            <div className="mt-4 p-3 bg-gray-900 border border-gray-700 rounded-md">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-gray-300">Cansancio (Fatiga)</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setFatigue(Math.max(0, fatigue - 1))} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">-</Button>
+                  <span className="text-yellow-400 font-bold w-4 text-center">{fatigue}</span>
+                  <Button variant="outline" size="sm" onClick={() => setFatigue(fatigue + 1)} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">+</Button>
+                </div>
+              </div>
+            </div>
             
             {character.temporaryShield > 0 && (
               <div className="mt-4 p-3 bg-cyan-950/80 rounded border border-cyan-500/50 flex items-center justify-between shadow-[0_0_15px_rgba(6,182,212,0.2)]">
@@ -295,9 +308,10 @@ export function PlayerView() {
         <Card className="h-full border-gray-800 flex flex-col bg-card/50">
           <Tabs defaultValue="inventory" className="w-full h-full flex flex-col">
             <CardHeader className="pb-0 pt-4 border-b border-gray-800">
-              <TabsList className="w-full grid grid-cols-2 bg-gray-900/80">
+              <TabsList className="w-full grid grid-cols-3 bg-gray-900/80">
                 <TabsTrigger value="inventory" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">Mi Inventario</TabsTrigger>
-                <TabsTrigger value="shop" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">Tienda del Mercader</TabsTrigger>
+                <TabsTrigger value="shop" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">Tienda</TabsTrigger>
+                <TabsTrigger value="ki" className="data-[state=active]:bg-gray-800 data-[state=active]:text-amber-400 font-bold">Dominios Ki</TabsTrigger>
               </TabsList>
             </CardHeader>
             <CardContent className="flex-grow p-0 pt-4">
@@ -349,8 +363,47 @@ export function PlayerView() {
                 </Table>
               </TabsContent>
               <TabsContent value="shop" className="h-full m-0 p-4">
-                <div className="flex justify-center items-center h-40 text-gray-500 italic">
-                  El mercader está preparando sus mercancías...
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold">Mercader Local</h3>
+                  <span className="text-yellow-500 font-bold flex items-center gap-2">
+                    💰 {gold} Oro
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { id: 'item-potion-minor', name: 'Poción de Vida Menor', cost: 10, type: 'CONSUMIBLE' },
+                    { id: 'item-potion-major', name: 'Poción de Vida Mayor', cost: 30, type: 'CONSUMIBLE' },
+                    { id: 'item-antidote', name: 'Antídoto', cost: 15, type: 'CONSUMIBLE' },
+                    { id: 'item-leather-armor', name: 'Coraza de Cuero', cost: 50, type: 'ARMADURA', mods: { FIL: 2, CON: 1, PEN: 1 } },
+                  ].map(shopItem => (
+                    <Card key={shopItem.id} className="bg-gray-900 border-gray-700">
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-gray-200">{shopItem.name}</div>
+                          <div className="text-xs text-gray-400">{shopItem.type}</div>
+                        </div>
+                        <Button 
+                          onClick={() => buyItem(CHARACTER_ID, { 
+                            id: shopItem.id, 
+                            name: shopItem.name, 
+                            quantity: 1, 
+                            type: shopItem.type, 
+                            equipped: false,
+                            modifiers: shopItem.mods 
+                          }, shopItem.cost)}
+                          disabled={gold < shopItem.cost}
+                          className="bg-yellow-700 hover:bg-yellow-600 text-white border-none shadow-sm disabled:opacity-50"
+                        >
+                          Comprar ({shopItem.cost} 💰)
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="ki" className="h-full m-0">
+                <div className="h-[600px] overflow-y-auto rounded border border-gray-800">
+                  <KiTree characterId={CHARACTER_ID} />
                 </div>
               </TabsContent>
             </CardContent>

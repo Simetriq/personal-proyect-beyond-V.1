@@ -1,8 +1,9 @@
 import { Server, Socket } from 'socket.io';
-import { processNextTurn, CharacterState } from '../engine/turn';
+
 import { PrismaClient } from '@prisma/client';
 import { CharacterRepository } from '../repositories/CharacterRepository';
 import { ABILITIES_REGISTRY } from '../domain/abilitiesRegistry';
+import { BuyKiAbilityCommand, ActivateKiAbilityCommand, DeactivateKiAbilityCommand } from '../domain/ki/KiCommands';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
@@ -27,7 +28,7 @@ async function loadCharacter(campaignId: string, characterId: string) {
 async function saveCharacter(character: any) {
   if (!character.id.startsWith('npc_')) {
     const repo = new CharacterRepository(prisma);
-    await saveCharacter(character);
+    await repo.save(character);
   }
 }
 
@@ -81,7 +82,8 @@ export function setupSocketEvents(io: Server) {
             gold: data.gold,
             ki: data.ki,
             zeon: data.zeon,
-            resistances: data.resistances
+            resistances: data.resistances,
+            kiAbilities: []
           });
           console.log(`[Socket] Character created: ${character.name}`);
         } else {
@@ -109,7 +111,8 @@ export function setupSocketEvents(io: Server) {
         ki: character.ki,
         zeon: character.zeon,
         temporaryShield: character.temporaryShield,
-        currentInitiative: character.currentInitiative
+        currentInitiative: character.currentInitiative,
+        kiAbilities: character.kiAbilities
       });
     };
 
@@ -144,6 +147,24 @@ export function setupSocketEvents(io: Server) {
         const character = await loadCharacter(data.campaignId, data.characterId);
         if (character) {
           character.useItem(data.itemId);
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('buy_item', async (data: { campaignId: string, characterId: string, item: any, cost: number }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character && character.gold >= data.cost) {
+          character.gold -= data.cost;
+          // Si el ítem ya existe en el inventario, incrementar cantidad, sino añadirlo
+          const existingItem = character.inventory[data.item.id];
+          if (existingItem) {
+            existingItem.quantity += data.item.quantity;
+          } else {
+            character.inventory[data.item.id] = data.item;
+          }
           await saveCharacter(character);
           broadcastCharacterUpdate(data.campaignId, character);
         }
@@ -319,6 +340,54 @@ export function setupSocketEvents(io: Server) {
           broadcastCharacterUpdate(data.campaignId, sourceChar);
         }
       } catch (e) { console.error(e); }
+    });
+
+    socket.on('buy_ki_ability', async (data: { campaignId: string, characterId: string, abilityId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          const ability = await prisma.kiAbility.findUnique({ where: { id: data.abilityId } });
+          if (!ability) return;
+
+          const command = new BuyKiAbilityCommand(character, ability as any);
+          if (command.execute()) {
+            await saveCharacter(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
+        }
+      } catch (e) { console.error('[Socket] Error Buy Ki:', e); }
+    });
+
+    socket.on('activate_ki_ability', async (data: { campaignId: string, characterId: string, abilityId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          const ability = await prisma.kiAbility.findUnique({ where: { id: data.abilityId } });
+          if (!ability) return;
+
+          const command = new ActivateKiAbilityCommand(character, ability as any);
+          if (command.execute()) {
+            await saveCharacter(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
+        }
+      } catch (e) { console.error('[Socket] Error Activate Ki:', e); }
+    });
+
+    socket.on('deactivate_ki_ability', async (data: { campaignId: string, characterId: string, abilityId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          const ability = await prisma.kiAbility.findUnique({ where: { id: data.abilityId } });
+          if (!ability) return;
+
+          const command = new DeactivateKiAbilityCommand(character, ability as any);
+          if (command.execute()) {
+            await saveCharacter(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
+        }
+      } catch (e) { console.error('[Socket] Error Deactivate Ki:', e); }
     });
 
     // Maneja la desconexión del socket

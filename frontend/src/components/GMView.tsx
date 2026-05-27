@@ -96,21 +96,26 @@ function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, re
           </Button>
         )}
         
-        <select 
-          disabled={isBleeding}
-          onChange={(e) => {
-            if (e.target.value) {
-              handleApplyEffect(e.target.value as 'SANGRADO' | 'VENENO' | 'PENALIZADOR');
-              e.target.value = "";
-            }
-          }}
-          className="border border-red-900 bg-red-950 text-red-300 text-sm rounded outline-none px-2 focus:border-red-500 disabled:opacity-50 transition-all cursor-pointer mr-2"
-        >
-          <option value="" disabled selected>➕ Efecto...</option>
-          <option value="SANGRADO">Corte Profundo (Sangrado)</option>
-          <option value="VENENO">Veneno de Basilisco</option>
-          <option value="PENALIZADOR">Aturdido / Shock</option>
-        </select>
+        <div className="flex gap-1 mr-2">
+          <Button 
+            disabled={isBleeding} 
+            onClick={() => handleApplyEffect('SANGRADO')}
+            variant="outline" size="sm" className="bg-red-950 border-red-900 text-red-300 hover:bg-red-900 hover:text-white transition-all active:scale-95 px-2"
+            title="Aplicar Sangrado"
+          >🩸</Button>
+          <Button 
+            disabled={isBleeding} 
+            onClick={() => handleApplyEffect('VENENO')}
+            variant="outline" size="sm" className="bg-green-950 border-green-900 text-green-300 hover:bg-green-900 hover:text-white transition-all active:scale-95 px-2"
+            title="Aplicar Veneno"
+          >🤢</Button>
+          <Button 
+            disabled={isBleeding} 
+            onClick={() => handleApplyEffect('PENALIZADOR')}
+            variant="outline" size="sm" className="bg-yellow-950 border-yellow-900 text-yellow-300 hover:bg-yellow-900 hover:text-white transition-all active:scale-95 px-2"
+            title="Aplicar Penalizador (Shock)"
+          >⚡</Button>
+        </div>
 
         <Dialog>
           <DialogTrigger asChild>

@@ -16,6 +16,7 @@ export interface Character {
   temporaryShield: number;
   currentInitiative: number | null;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
+  kiAbilities: string[];
 }
 
 export interface CombatState {
@@ -39,6 +40,7 @@ interface CombatStore {
   equipItem: (characterId: string, itemId: string) => void;
   unequipItem: (characterId: string, itemId: string) => void;
   useItem: (characterId: string, itemId: string) => void;
+  buyItem: (characterId: string, item: any, cost: number) => void;
   gmUpdateCharacter: (characterId: string, updates: any) => void;
   applyEffect: (characterId: string, effect: any) => void;
   nextRoundTick: () => void;
@@ -48,9 +50,13 @@ interface CombatStore {
   nextTurn: () => void;
   spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => void;
   removeNpc: (characterId: string) => void;
+
+  buyKiAbility: (characterId: string, abilityId: string) => void;
+  activateKiAbility: (characterId: string, abilityId: string) => void;
+  deactivateKiAbility: (characterId: string, abilityId: string) => void;
 }
 
-const SOCKET_URL = 'http://localhost:3000'; // Ajustar según el entorno
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
   socket: null,
@@ -95,6 +101,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             zeon: data.zeon !== undefined ? data.zeon : state.characters[data.characterId]?.zeon,
             temporaryShield: data.temporaryShield !== undefined ? data.temporaryShield : state.characters[data.characterId]?.temporaryShield,
             currentInitiative: data.currentInitiative !== undefined ? data.currentInitiative : state.characters[data.characterId]?.currentInitiative,
+            kiAbilities: data.kiAbilities || state.characters[data.characterId]?.kiAbilities || [],
             state: data.state as Character['state']
           }
         }
@@ -160,6 +167,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
+  buyItem: (characterId: string, item: any, cost: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('buy_item', { campaignId, characterId, item, cost });
+    }
+  },
+
   gmUpdateCharacter: (characterId: string, updates: any) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
@@ -220,6 +234,27 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('remove_npc', { campaignId, characterId });
+    }
+  },
+
+  buyKiAbility: (characterId: string, abilityId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('buy_ki_ability', { campaignId, characterId, abilityId });
+    }
+  },
+
+  activateKiAbility: (characterId: string, abilityId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('activate_ki_ability', { campaignId, characterId, abilityId });
+    }
+  },
+
+  deactivateKiAbility: (characterId: string, abilityId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('deactivate_ki_ability', { campaignId, characterId, abilityId });
     }
   }
 }));

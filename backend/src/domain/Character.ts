@@ -1,4 +1,5 @@
 import { Resistances } from './Resistances';
+import { applyDirectDamage } from '../engine/combat';
 
 export type CharacterState = 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 
@@ -44,6 +45,7 @@ export class Character {
   public resistances: Resistances;
   public inventory: Record<string, Item>; 
   public activeEffects: ActiveEffect[];
+  public kiAbilities: string[];
   public state: CharacterState;
 
   constructor(data: any) {
@@ -69,6 +71,9 @@ export class Character {
     
     // Inicializamos estados activos guardados en 'dotes' o como 'activeEffects' directos
     this.activeEffects = data.dotes || data.activeEffects || [];
+    
+    // Inicializamos kiAbilities
+    this.kiAbilities = data.kiAbilities || [];
     
     // Calculamos las resistencias totales (base + equipamiento)
     this.resistances = new Resistances();
@@ -106,7 +111,7 @@ export class Character {
     this.recalculateResistances();
   }
 
-  private recalculateResistances() {
+  public recalculateResistances() {
     let FIL = this.baseResistances.FIL;
     let CON = this.baseResistances.CON;
     let PEN = this.baseResistances.PEN;
@@ -253,15 +258,8 @@ export class Character {
 
     const ta = this.resistances.getResistanceByType(type);
     
-    // Reducción del 10% por punto de TA (ej. 3 TA = 30% reducción)
-    const reductionPercentage = ta * 0.10;
-    
-    // Evitamos reducciones mayores al 100% si TA >= 10
-    const effectiveReduction = Math.min(reductionPercentage, 1);
-    
-    // Calculamos el daño final (siempre mínimo 1 si el ataque impactó la armadura)
-    let finalDamage = remainingDamage * (1 - effectiveReduction);
-    finalDamage = Math.max(1, Math.round(finalDamage));
+    // Calculamos el daño final usando el motor de combate
+    const finalDamage = applyDirectDamage(remainingDamage, ta);
 
     this.currentHp -= finalDamage;
 

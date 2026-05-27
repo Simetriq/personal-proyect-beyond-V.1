@@ -13,9 +13,10 @@ export class Resistances {
    * Obtiene la armadura (TA) basada en el tipo de daño.
    */
   getResistanceByType(type: string): number {
-    const key = type.toUpperCase() as keyof Resistances;
-    if (this[key] !== undefined) {
-      return this[key] as number;
+    const validKeys = ['FIL', 'CON', 'PEN', 'CAL', 'ELE', 'FRI', 'ENE'];
+    const key = type.toUpperCase();
+    if (validKeys.includes(key)) {
+      return this[key as keyof Resistances] as number;
     }
     return 0; // Por defecto si el tipo no es válido o no tiene TA
   }

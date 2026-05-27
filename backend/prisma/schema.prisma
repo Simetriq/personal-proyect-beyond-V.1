@@ -39,6 +39,7 @@ model Character {
   resistances     Json
   inventory       Json
   dotes           Json
+  kiAbilities     Json           @default("[]")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   activeEffects   ActiveEffect[]
@@ -53,4 +54,17 @@ model ActiveEffect {
   duration_rounds Int
   createdAt       DateTime  @default(now())
   character       Character @relation(fields: [characterId], references: [id])
+}
+
+model KiAbility {
+  id                String   @id
+  name              String
+  cmCost            Int
+  prerequisites     Json     @default("[]")
+  effectType        String
+  kiCostActivation  Int
+  kiCostMaintenance Int      @default(0)
+  description       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
