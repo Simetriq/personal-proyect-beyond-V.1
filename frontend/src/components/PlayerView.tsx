@@ -3,13 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+
 import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 import { KiTree } from "./KiTree";
 import { KiAccumulator } from "./ui/KiAccumulator";
 import { DiceRoller } from "./ui/DiceRoller";
+
+const ITEM_ICONS: Record<string, string> = {
+  'item-potion-minor': '/assets/icons/gen_potion_minor.png',
+  'item-potion-major': '/assets/icons/gen_potion_major.png',
+  'item-antidote': '/assets/icons/gen_antidote.png',
+  'item-leather-armor': '/assets/icons/gen_leather_armor.png',
+};
 
 export function PlayerView() {
   const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered } = useCombatStore();
@@ -196,22 +203,22 @@ export function PlayerView() {
       {/* Columna Izquierda: Estado Vital */}
       <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
         <Card className="panel-arcano">
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-2xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider">Estado Vital</CardTitle>
+          <CardHeader className="pb-0 pt-3 relative z-10">
+            <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider">Estado Vital</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 relative z-10">
+          <CardContent className="space-y-3 p-3 pt-2 relative z-10">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-serif text-gray-300 tracking-wider">HP (Vida)</span>
                 <span className="font-bold text-anima-blood drop-shadow-md">{hp} / {maxHp}</span>
               </div>
-              <div className="cristal-tubo h-5">
+              <div className="cristal-tubo h-4">
                 <div className="bg-gradient-to-r from-red-900 to-anima-blood h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(138,3,3,0.8)] relative" style={{ width: `${hpPercentage}%` }}>
                    <div className="absolute top-0 left-0 right-0 h-[40%] bg-white/20 rounded-t-full"></div>
                 </div>
               </div>
               {character.isBleeding && (
-                <div className="mt-2 flex items-center justify-between p-2 bg-red-950/40 rounded border border-red-900/50">
+                <div className="mt-1 flex items-center justify-between p-1 px-2 bg-red-950/40 rounded border border-red-900/50">
                   <span className="text-red-400 text-xs font-bold uppercase tracking-wider animate-pulse">Sangrando</span>
                   <span className="text-gray-400 text-xs">Daño base acum: {character.bleedingDamage}</span>
                 </div>
@@ -223,14 +230,14 @@ export function PlayerView() {
                 <span className="font-serif text-gray-300 tracking-wider">Ki</span>
                 <span className="font-bold text-anima-ki drop-shadow-md">{character.ki || 0}</span>
               </div>
-              <div className="cristal-tubo h-5">
+              <div className="cristal-tubo h-4">
                 <div className="bg-gradient-to-r from-cyan-900 to-anima-ki h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(0,229,255,0.8)] relative" style={{ width: `${Math.min(100, ((character.ki || 0) / 50) * 100)}%` }}>
                   <div className="absolute top-0 left-0 right-0 h-[40%] bg-white/20 rounded-t-full"></div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4">
+            <div>
               <KiAccumulator characterId={CHARACTER_ID} />
             </div>
 
@@ -239,25 +246,25 @@ export function PlayerView() {
                 <span className="font-serif text-gray-300 tracking-wider">Zeon</span>
                 <span className="font-bold text-anima-zeon drop-shadow-md">{character.zeon || 0}</span>
               </div>
-              <div className="cristal-tubo h-5">
+              <div className="cristal-tubo h-4">
                 <div className="bg-gradient-to-r from-purple-900 to-[#8b5cf6] h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(139,92,246,0.8)] relative" style={{ width: '100%' }}>
                   <div className="absolute top-0 left-0 right-0 h-[40%] bg-white/20 rounded-t-full"></div>
                 </div>
               </div>
               
               {/* Canalización Mágica */}
-              <div className="mt-3 p-2 bg-purple-950/40 rounded border border-purple-900/50">
+              <div className="mt-2 p-1.5 bg-purple-950/40 rounded border border-purple-900/50">
                 {character.isChanneling ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-purple-400 font-bold animate-pulse">Canalizando Magia...</span>
-                      <span className="text-purple-300">{character.channeledZeon} Zeon Acumulado</span>
+                      <span className="text-purple-300">{character.channeledZeon} Zeon</span>
                     </div>
                     <div className="text-[10px] text-gray-500 text-center">-20 a la Defensa Total</div>
                     <Button 
                       size="sm" 
                       variant="destructive" 
-                      className="h-6 text-xs bg-red-900/80 hover:bg-red-800"
+                      className="h-6 text-[10px] bg-red-900/80 hover:bg-red-800 btn-piedra-runica text-red-200 border-red-900"
                       onClick={() => useCombatStore.getState().stopChanneling(CHARACTER_ID!)}
                     >
                       Detener Canalización
@@ -266,7 +273,7 @@ export function PlayerView() {
                 ) : (
                   <Button 
                     size="sm" 
-                    className="w-full h-8 text-xs bg-purple-900 hover:bg-purple-800 text-white border border-purple-700"
+                    className="w-full h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-purple-900 to-black hover:from-purple-800 hover:to-purple-900 text-purple-200 border-purple-900 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
                     onClick={() => useCombatStore.getState().startChanneling(CHARACTER_ID!, 'spell_custom')}
                   >
                     Empezar a Canalizar
@@ -275,18 +282,20 @@ export function PlayerView() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 bg-black/40 p-3 rounded-lg border border-gray-800/50">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-300">Cansancio</span>
-                <span className="text-anima-goldglow font-bold">{character.currentFatigue ?? 5} / {character.maxFatigue ?? 5}</span>
+            <div className="flex flex-col gap-2 p-2.5 bg-[#161411] border-[2px] border-[#3a2b1c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,1)]">
+              <div className="flex justify-between items-center border-b border-[#3a2b1c] pb-1">
+                <span className="font-serif font-bold text-[#c5a059] tracking-wider uppercase text-xs">Cansancio</span>
+                <span className="text-anima-goldglow font-bold bg-[#0a0806] px-2 rounded border border-[#2a2215] text-xs shadow-inner">
+                  {character.currentFatigue ?? 5} / {character.maxFatigue ?? 5}
+                </span>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Button variant="outline" size="sm" onClick={() => setFatigueToSpend(Math.max(1, fatigueToSpend - 1))} className="h-8 w-8 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">-</Button>
-                <span className="text-white font-bold w-4 text-center">{fatigueToSpend}</span>
-                <Button variant="outline" size="sm" onClick={() => setFatigueToSpend(Math.min(character.currentFatigue ?? 5, fatigueToSpend + 1))} className="h-8 w-8 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">+</Button>
+              <div className="flex items-center gap-1 mt-1">
+                <Button variant="outline" size="sm" onClick={() => setFatigueToSpend(Math.max(1, fatigueToSpend - 1))} className="h-6 w-6 p-0 btn-piedra-runica bg-gradient-to-b from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border border-[#4a3b2c] text-[#8b7355] text-xs shadow-md">-</Button>
+                <span className="text-anima-gold font-bold w-5 text-center text-xs">{fatigueToSpend}</span>
+                <Button variant="outline" size="sm" onClick={() => setFatigueToSpend(Math.min(character.currentFatigue ?? 5, fatigueToSpend + 1))} className="h-6 w-6 p-0 btn-piedra-runica bg-gradient-to-b from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border border-[#4a3b2c] text-[#8b7355] text-xs shadow-md">+</Button>
                 <Button 
                   size="sm" 
-                  className="flex-grow bg-blue-900 hover:bg-blue-800 text-white border border-blue-700"
+                  className="flex-grow h-6 text-[9px] btn-piedra-runica bg-gradient-to-b from-blue-900 to-black hover:from-blue-800 hover:to-blue-900 border border-blue-900 text-blue-200 uppercase tracking-widest rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
                   onClick={() => {
                     useCombatStore.getState().spendFatigue(CHARACTER_ID!, fatigueToSpend);
                   }}
@@ -296,14 +305,14 @@ export function PlayerView() {
                 </Button>
               </div>
               {(character.currentFatigue ?? 5) <= 0 && (
-                <div className="text-xs text-red-400 text-center font-bold uppercase mt-1">Agotado (-40 Todas las Acciones)</div>
+                <div className="text-[9px] text-red-400 text-center font-bold uppercase mt-0.5">Agotado (-40 a la Acción)</div>
               )}
               
-              <div className="mt-2 border-t border-gray-800 pt-2">
+              <div className="mt-1">
                 <Button 
                   size="sm" 
                   variant="outline"
-                  className="w-full h-8 text-xs border-red-900/50 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                  className="w-full h-6 text-[9px] btn-piedra-runica bg-gradient-to-b from-red-950 to-black hover:from-red-900 hover:to-black border border-red-900 text-red-300 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
                   onClick={() => {
                     const level = prompt("Ingresa el nivel de fallo psíquico (Puntos de fatiga a perder):", "1");
                     const parsed = parseInt(level || "0");
@@ -318,153 +327,16 @@ export function PlayerView() {
             </div>
 
             {character.temporaryShield > 0 && (
-              <div className="mt-4 p-3 bg-cyan-950/80 rounded border border-cyan-500/50 flex items-center justify-between shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <div className="mt-2 p-2 bg-cyan-950/80 rounded border border-cyan-500/50 flex items-center justify-between shadow-[0_0_15px_rgba(6,182,212,0.2)]">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🛡️</span>
-                  <span className="text-cyan-300 font-bold">Escudo Místico Activo</span>
+                  <span className="text-cyan-300 font-bold text-xs">Escudo Místico</span>
                 </div>
-                <span className="text-cyan-100 font-bold bg-cyan-900 px-3 py-1 rounded-full">{character.temporaryShield} HP</span>
-              </div>
-            )}
-
-            {/* Badges de Efectos Activos bajo la vida */}
-            {character.activeEffects && character.activeEffects.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {character.activeEffects.map((effect: any) => (
-                  <span key={effect.id} className="bg-red-950/80 text-red-300 text-xs px-2 py-1 rounded border border-red-900 shadow-sm flex items-center">
-                    {effect.type === 'SANGRADO' ? '🩸' : effect.type === 'VENENO' ? '🤢' : '⚠️'} 
-                    <span className="ml-1 font-bold">{effect.name}</span>
-                    <span className="ml-1 opacity-80">- {effect.value} PV ({effect.durationRounds} asaltos)</span>
-                  </span>
-                ))}
+                <span className="text-cyan-100 font-bold bg-cyan-900 px-2 py-0.5 text-xs rounded-full">{character.temporaryShield} HP</span>
               </div>
             )}
           </CardContent>
         </Card>
-
-        {character.maxZeon > 0 && (
-          <Card className="panel-arcano">
-            <CardHeader className="pb-2 pt-4 relative z-10">
-              <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-[#8b5cf6] drop-shadow-md flex items-center gap-2">
-                📖 Grimorio Místico
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {Object.values(MAGIC_SPELLS).map(spell => {
-                const target = spell.target === 'ENEMY' ? targetId : CHARACTER_ID;
-                const isAttack = spell.type === 'DAMAGE' || spell.type === 'EFFECT';
-                const borderColor = isAttack ? 'border-red-800' : 'border-purple-800';
-                const textColor = isAttack ? 'text-red-400' : 'text-purple-300';
-                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-purple-950';
-                const icon = isAttack ? '🔥' : '🛡️';
-                const extraText = spell.target === 'ENEMY' ? ' - Usa Objetivo' : '';
-                return (
-                  <Button 
-                    key={spell.id}
-                    onClick={() => useAbility(CHARACTER_ID, target, spell.id)} 
-                    variant="outline" 
-                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100`}
-                  >
-                    {icon} {spell.name} ({spell.cost} Zeon){extraText}
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-
-        {character.maxKi > 0 && (
-          <Card className="panel-arcano">
-            <CardHeader className="pb-2 pt-4 relative z-10">
-              <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 drop-shadow-md flex items-center gap-2">
-                🥋 Técnicas de Ki
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {Object.values(KI_ABILITIES).map(tech => {
-                const target = tech.target === 'ENEMY' ? targetId : CHARACTER_ID;
-                const isAttack = tech.type === 'DAMAGE' || tech.type === 'EFFECT';
-                const borderColor = isAttack ? 'border-red-800' : 'border-blue-800';
-                const textColor = isAttack ? 'text-red-400' : 'text-blue-300';
-                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-blue-950';
-                const icon = isAttack ? '💥' : '💪';
-                const extraText = tech.target === 'ENEMY' ? ' - Usa Objetivo' : '';
-                return (
-                  <Button 
-                    key={tech.id}
-                    onClick={() => useAbility(CHARACTER_ID, target, tech.id)} 
-                    variant="outline" 
-                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100`}
-                  >
-                    {icon} {tech.name} ({tech.cost} Ki){extraText}
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="panel-arcano">
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-2xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider">
-              Calculadora de Daño
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 mt-4 relative z-10">
-            <div className="flex flex-col gap-2">
-              <label className="text-anima-gold font-serif text-sm tracking-wider">Objetivo:</label>
-              <select 
-                value={targetId} 
-                onChange={(e) => setTargetId(e.target.value)}
-                className="w-full bg-[#1a1714] border border-[#4a3b2c] shadow-inner text-gray-200 rounded p-3 text-lg focus:border-anima-gold focus:ring-1 focus:ring-anima-gold outline-none transition-colors"
-                style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}
-              >
-                {Object.values(characters).map(c => (
-                  <option key={c.id} value={c.id}>{c.name} {c.id.startsWith('npc_') ? '(Enemigo)' : ''}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex gap-2">
-              <div className="flex-grow">
-                <Input 
-                  ref={inputRef}
-                  type="number" 
-                  placeholder="Cantidad..." 
-                  className="w-full text-lg py-6 bg-[#1a1714] border-[#4a3b2c] shadow-inner text-gray-200 focus:border-anima-gold focus:ring-1 focus:ring-anima-gold" 
-                  style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}
-                  value={damageAmount}
-                  onChange={(e) => setDamageAmount(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-400 font-semibold mb-1">Tipo de Daño:</label>
-              <select 
-                value={selectedType} 
-                onChange={(e) => setSelectedType(e.target.value as DamageType)}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="FIL">Filo [FIL]</option>
-                <option value="CON">Contundente [CON]</option>
-                <option value="PEN">Penetración [PEN]</option>
-                <option value="CAL">Calor [CAL]</option>
-                <option value="ELE">Electricidad [ELE]</option>
-                <option value="FRI">Frío [FRI]</option>
-                <option value="ENE">Energía [ENE]</option>
-              </select>
-            </div>
-
-            <Button onClick={handleApplyDamage} className="w-full mt-2 text-xl py-6 btn-piedra-runica bg-gradient-to-r from-red-900 to-red-700 text-white border-red-500 shadow-glow-blood hover:bg-red-800 transition-all active:scale-95 duration-100">
-              ⚔️ APLICAR DAÑO ⚔️
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Lanzador de Dados */}
-        <DiceRoller characterId={CHARACTER_ID} />
       </div>
 
       <div className="col-span-6 h-full z-10">
@@ -482,49 +354,63 @@ export function PlayerView() {
               <TabsContent value="inventory" className="h-full m-0 p-4">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-semibold">Equipamiento</h3>
-                  <span className="text-yellow-500 font-bold flex items-center gap-2">
-                    💰 {gold} Oro
+                  <span className="text-anima-gold font-bold flex items-center gap-2 bg-[#1a1714] px-3 py-1 rounded-full border border-[#4a3b2c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
+                    <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-5 h-5 object-contain drop-shadow-md" /> {gold} Oro
                   </span>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-800 hover:bg-transparent">
-                      <TableHead>Ítem</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead className="text-right">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {character.inventory && Object.values(character.inventory).length > 0 ? (
-                      Object.values(character.inventory).map((item: any) => (
-                        <TableRow key={item.id} className="border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                          <TableCell className="font-medium text-gray-200">
-                            {item.name} {item.equipped && <span className="text-xs text-green-500 ml-2">(Equipado)</span>}
-                          </TableCell>
-                          <TableCell className="text-gray-400 text-sm">{item.type}</TableCell>
-                          <TableCell className="text-gray-300">{item.quantity}</TableCell>
-                          <TableCell className="text-right space-x-2">
-                            {item.type === 'ARMADURA' && (
-                              item.equipped ? (
-                                <Button size="sm" variant="outline" onClick={() => unequipItem(CHARACTER_ID, item.id)} className="bg-red-900 hover:bg-red-800 border-red-700 text-white transition-all active:scale-95 duration-100">Desequipar</Button>
-                              ) : (
-                                <Button size="sm" variant="secondary" onClick={() => equipItem(CHARACTER_ID, item.id)} className="bg-green-900 hover:bg-green-800 text-white transition-all active:scale-95 duration-100">Equipar</Button>
-                              )
-                            )}
-                            {item.type === 'CONSUMIBLE' && (
-                              <Button size="sm" variant="secondary" onClick={() => useItem(CHARACTER_ID, item.id)} className="bg-blue-900 hover:bg-blue-800 text-white transition-all active:scale-95 duration-100">Usar</Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-gray-500 py-4">Inventario vacío.</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                  {character.inventory && Object.values(character.inventory).length > 0 ? (
+                    Object.values(character.inventory).map((item: any) => (
+                      <div key={item.id} className="relative bg-[#161411] p-1.5 rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.9)] border border-[#111]">
+                        {/* Marco exterior metálico */}
+                        <div className="border-[3px] border-[#3a2b1c] rounded-sm p-1 shadow-[inset_0_0_10px_rgba(0,0,0,1)] bg-[#2a2215]">
+                          {/* Papel interior (Pergamino) */}
+                          <div className="relative bg-[#d4cbb8] flex h-[90px] shadow-[inset_0_0_20px_rgba(139,115,85,0.4)]" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/old-mathematics.png')" }}>
+                            
+                            {/* Icono a la izquierda */}
+                            <div className="w-[90px] h-full flex-shrink-0 bg-[#2a2215] border-r-[3px] border-[#3a2b1c] flex items-center justify-center p-2">
+                              <div className="w-14 h-14 rounded-full bg-[#161411] border-2 border-[#111] shadow-[inset_0_0_15px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden">
+                                <img src={ITEM_ICONS[item.id] || '/assets/icons/gen_ki_default.png'} alt={item.name} className="w-[150%] h-[150%] object-cover object-center drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
+                              </div>
+                            </div>
+
+                            {/* Detalles a la derecha */}
+                            <div className="flex-grow p-3 flex flex-col justify-between">
+                              <div>
+                                <div className="font-bold text-[#1a1714] font-serif text-md leading-tight tracking-wide">
+                                  {item.name} {item.equipped && <span className="text-xs text-green-800 ml-1 font-sans font-bold bg-green-900/10 px-1 rounded-sm border border-green-800/30">(Equipado)</span>}
+                                </div>
+                                <div className="flex justify-between items-center mt-1">
+                                  <div className="text-xs text-[#5c4a35] font-bold uppercase tracking-widest">{item.type}</div>
+                                  <div className="text-xs text-[#1a1714] font-bold">Cant: {item.quantity}</div>
+                                </div>
+                              </div>
+                              
+                              <div className="self-end flex gap-2">
+                                {item.type === 'ARMADURA' && (
+                                  item.equipped ? (
+                                    <Button size="sm" onClick={() => unequipItem(CHARACTER_ID, item.id)} className="h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-red-900 to-black hover:from-red-800 hover:to-red-900 border-2 border-red-900 text-red-200 uppercase tracking-wider rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)]">Desequipar</Button>
+                                  ) : (
+                                    <Button size="sm" onClick={() => equipItem(CHARACTER_ID, item.id)} className="h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-green-900 to-black hover:from-green-800 hover:to-green-900 border-2 border-green-900 text-green-200 uppercase tracking-wider rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)]">Equipar</Button>
+                                  )
+                                )}
+                                {item.type === 'CONSUMIBLE' && (
+                                  <Button size="sm" onClick={() => useItem(CHARACTER_ID, item.id)} className="h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-blue-900 to-black hover:from-blue-800 hover:to-blue-900 border-2 border-blue-900 text-blue-200 uppercase tracking-wider rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)]">Usar</Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full flex flex-col items-center justify-center p-8 bg-[#161411]/80 border border-[#3a2b1c] rounded shadow-inner-gold">
+                      <span className="text-4xl mb-4 opacity-50">📜</span>
+                      <p className="text-[#8b7355] font-serif text-lg tracking-wider text-center">Tu inventario está vacío.</p>
+                      <p className="text-gray-500 text-sm mt-2 text-center">Visita el Mercader Local para adquirir equipamiento y provisiones.</p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
               <TabsContent value="shop" className="h-full m-0 p-6 relative">
                 {/* Estrellas de fondo para la tienda completa */}
@@ -595,12 +481,14 @@ export function PlayerView() {
         </Card>
       </div>
 
-      {/* Panel Derecho: Alertas */}
-      <div className="col-span-3 flex flex-col gap-4 z-10">
-        <Card className="panel-arcano">
-          <CardHeader className="relative z-10">
-            <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-md flex items-center gap-2">
-              ⚠️ Recordatorios y Alertas
+      {/* Panel Derecho: Acciones y Alertas */}
+      <div className="col-span-3 flex flex-col gap-4 h-full z-10">
+        
+        {/* Recordatorios y Alertas */}
+        <Card className="panel-arcano shrink-0">
+          <CardHeader className="relative z-10 pb-2 pt-4">
+            <CardTitle className="text-lg font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-md flex items-center gap-2 uppercase tracking-wider">
+              <span className="text-yellow-500 text-xl">🔔</span> Recordatorios y Alertas
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -612,20 +500,161 @@ export function PlayerView() {
               </div>
             )}
             
-            <div>
-              <h4 className="font-semibold text-gray-400 text-sm mb-2">Registro de Efectos</h4>
+            <div className="p-3 bg-[#161411] border-[2px] border-[#3a2b1c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,1)]">
+              <div className="flex items-center gap-2 border-b border-[#3a2b1c] pb-2 mb-2">
+                <span className="text-xl">📜</span>
+                <h4 className="font-bold text-[#c5a059] text-xs uppercase tracking-widest font-serif">Registro de Efectos</h4>
+              </div>
               {character.activeEffects && character.activeEffects.length > 0 ? (
                 character.activeEffects.map((effect: any) => (
-                  <div key={effect.id} className="text-sm p-3 bg-gray-900/80 rounded border border-red-900/50 text-gray-300 shadow-inner mb-2">
-                    <span className="text-red-400 font-bold mr-2">{effect.name}</span>
-                    Dañará {effect.value} HP ({effect.durationRounds} asaltos restantes)
+                  <div key={effect.id} className="text-xs p-2 bg-[#2a0808] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-2 flex items-center justify-between relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
+                    <div className="relative z-10 flex items-center gap-2">
+                      <span className="text-red-400 font-bold uppercase tracking-wider">{effect.name}</span>
+                      <span className="opacity-80">Dañará {effect.value} HP</span>
+                    </div>
+                    <span className="relative z-10 text-[10px] font-bold text-red-300 bg-red-950 px-2 py-0.5 rounded border border-red-900/50">
+                      {effect.durationRounds} turnos
+                    </span>
                   </div>
                 ))
               ) : (
-                <div className="text-sm p-3 bg-gray-900/80 rounded border border-gray-800 text-gray-500 shadow-inner italic">
-                  No tienes efectos negativos activos.
+                <div className="text-xs p-2 bg-[#0a0806] rounded border border-[#2a2215] text-[#5c4a35] shadow-inner italic font-serif text-center">
+                  Ningún mal acecha tu cuerpo.
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Habilidades Activas */}
+        {character.maxZeon > 0 && (
+          <Card className="panel-arcano shrink-0">
+            <CardHeader className="pb-2 pt-4 relative z-10">
+              <CardTitle className="text-lg font-serif text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-[#8b5cf6] drop-shadow-md flex items-center gap-2">
+                📖 Grimorio Místico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {Object.values(MAGIC_SPELLS).map(spell => {
+                const target = spell.target === 'ENEMY' ? targetId : CHARACTER_ID;
+                const isAttack = spell.type === 'DAMAGE' || spell.type === 'EFFECT';
+                const borderColor = isAttack ? 'border-red-800' : 'border-purple-800';
+                const textColor = isAttack ? 'text-red-400' : 'text-purple-300';
+                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-purple-950';
+                const icon = isAttack ? '🔥' : '🛡️';
+                const extraText = spell.target === 'ENEMY' ? ' - Usa Objetivo' : '';
+                return (
+                  <Button 
+                    key={spell.id}
+                    onClick={() => useAbility(CHARACTER_ID, target, spell.id)} 
+                    variant="outline" 
+                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100 text-xs`}
+                  >
+                    {icon} {spell.name} ({spell.cost} Zeon){extraText}
+                  </Button>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {character.maxKi > 0 && (
+          <Card className="panel-arcano shrink-0">
+            <CardHeader className="pb-2 pt-4 relative z-10">
+              <CardTitle className="text-lg font-serif text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 drop-shadow-md flex items-center gap-2">
+                🥋 Técnicas de Ki
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {Object.values(KI_ABILITIES).map(tech => {
+                const target = tech.target === 'ENEMY' ? targetId : CHARACTER_ID;
+                const isAttack = tech.type === 'DAMAGE' || tech.type === 'EFFECT';
+                const borderColor = isAttack ? 'border-red-800' : 'border-blue-800';
+                const textColor = isAttack ? 'text-red-400' : 'text-blue-300';
+                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-blue-950';
+                const icon = isAttack ? '💥' : '💪';
+                const extraText = tech.target === 'ENEMY' ? ' - Usa Objetivo' : '';
+                return (
+                  <Button 
+                    key={tech.id}
+                    onClick={() => useAbility(CHARACTER_ID, target, tech.id)} 
+                    variant="outline" 
+                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100 text-xs`}
+                  >
+                    {icon} {tech.name} ({tech.cost} Ki){extraText}
+                  </Button>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Acciones de Combate */}
+        <Card className="panel-arcano flex-grow flex flex-col min-h-0">
+          <CardHeader className="pb-2 pt-3 relative z-10 shrink-0 border-b border-[#3a2b1c]">
+            <CardTitle className="text-lg font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-widest flex items-center gap-2 justify-center">
+              ⚔️ Acciones de Combate ⚔️
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 relative z-10 overflow-y-auto p-3 pt-3">
+            {/* Lanzador de Dados */}
+            <DiceRoller characterId={CHARACTER_ID} />
+
+            {/* Calculadora de Daño */}
+            <div className="flex flex-col gap-3 p-3 bg-[#161411] border-[2px] border-[#3a2b1c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,1)] relative overflow-hidden mt-1">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-wood.png')] opacity-20 pointer-events-none"></div>
+              
+              <div className="flex items-center gap-2 border-b border-[#3a2b1c] pb-2 relative z-10">
+                <span className="text-xl text-red-700 drop-shadow-md">🩸</span>
+                <h4 className="font-bold text-red-500 text-xs uppercase tracking-widest font-serif drop-shadow-md">Ejecutar Daño</h4>
+              </div>
+
+              <div className="flex flex-col gap-2 relative z-10">
+                <select 
+                  value={targetId} 
+                  onChange={(e) => setTargetId(e.target.value)}
+                  className="w-full bg-[#0a0806] border border-[#3a2b1c] shadow-inner text-[#c5a059] rounded p-2 text-sm focus:border-red-900 focus:ring-1 focus:ring-red-900 outline-none transition-colors font-serif italic"
+                  style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}
+                >
+                  <option value="">Seleccionar Víctima...</option>
+                  {Object.values(characters).map(c => (
+                    <option key={c.id} value={c.id}>{c.name} {c.id.startsWith('npc_') ? '(Enemigo)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex gap-2 relative z-10">
+                <div className="flex-grow">
+                  <Input 
+                    ref={inputRef}
+                    type="number" 
+                    placeholder="Cantidad..." 
+                    value={damageAmount} 
+                    onChange={(e) => setDamageAmount(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-[#0a0806] border-[#3a2b1c] text-red-500 text-center font-bold text-lg h-9 shadow-inner focus:border-red-900 font-serif"
+                    style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}
+                  />
+                </div>
+                <select 
+                  value={selectedType} 
+                  onChange={(e) => setSelectedType(e.target.value as DamageType)}
+                  className="bg-[#0a0806] border border-[#3a2b1c] text-[#8b7355] rounded p-1.5 focus:border-red-900 outline-none text-xs font-serif uppercase tracking-wider"
+                >
+                  <option value="FIL">Filo</option>
+                  <option value="CON">Contundente</option>
+                  <option value="PEN">Penetración</option>
+                  <option value="CAL">Calor</option>
+                  <option value="ELE">Electricidad</option>
+                  <option value="FRI">Frío</option>
+                  <option value="ENE">Energía</option>
+                </select>
+              </div>
+
+              <Button onClick={handleApplyDamage} className="w-full mt-1 h-9 text-xs btn-piedra-runica bg-gradient-to-b from-red-950 to-black hover:from-red-900 hover:to-black border border-red-900 text-red-200 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
+                Aplicar Daño
+              </Button>
             </div>
           </CardContent>
         </Card>
