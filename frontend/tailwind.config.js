@@ -19,7 +19,28 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        serif: ['Cinzel', 'serif'],
+        sans: ['Inter', 'sans-serif'],
+      },
+      boxShadow: {
+        'glow-gold': '0 0 15px rgba(197, 160, 89, 0.3)',
+        'glow-blood': '0 0 15px rgba(138, 3, 3, 0.5)',
+        'glow-zeon': '0 0 15px rgba(75, 0, 130, 0.5)',
+        'glow-ki': '0 0 15px rgba(0, 229, 255, 0.3)',
+        'glass': 'inset 0 0 20px rgba(255, 255, 255, 0.05)',
+        'glass-gold': 'inset 0 0 20px rgba(197, 160, 89, 0.1), 0 0 10px rgba(197, 160, 89, 0.2)',
+      },
       colors: {
+        anima: {
+          dark: '#0B0A0F',
+          gold: '#C5A059',
+          goldglow: '#F2D27A',
+          blood: '#8A0303',
+          zeon: '#4B0082',
+          ki: '#00E5FF',
+          panel: 'rgba(15, 15, 20, 0.85)'
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

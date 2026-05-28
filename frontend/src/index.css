@@ -4,14 +4,14 @@
  
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
+    --background: 250 20% 5%; /* #0B0A0F equivalent */
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 250 20% 8%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 250 20% 5%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 40 45% 56%; /* Gold C5A059 equivalent */
+    --primary-foreground: 0 0% 10%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -29,9 +29,12 @@
  
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border font-sans;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-wide;
   }
 }

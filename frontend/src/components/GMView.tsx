@@ -58,10 +58,10 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
 
   return (
     <TableRow 
-      className={`transition-colors ${isUnconscious ? 'bg-red-950/40 border-red-900 hover:bg-red-900/40' : isActiveTurn ? 'bg-yellow-900/20 border-yellow-500 shadow-[inset_0_0_15px_rgba(234,179,8,0.2)]' : 'border-gray-800/50 hover:bg-gray-800/30'}`}
+      className={`transition-colors ${isUnconscious ? 'bg-red-950/40 border-red-900 hover:bg-red-900/40' : isActiveTurn ? 'bg-anima-gold/10 border-anima-gold shadow-glass-gold' : 'border-gray-800/50 hover:bg-white/5'}`}
     >
-      <TableCell className="font-bold text-lg text-gray-200">
-        {char.name} {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse">(Inconsciente)</span>}
+      <TableCell className="font-bold text-lg text-gray-200 font-serif">
+        {char.name} {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse font-sans">(Inconsciente)</span>}
         {combatStateData?.isDefensive && <span className="text-blue-400 bg-blue-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-blue-800">🛡️ A la Defensiva</span>}
         {combatStateData?.hasActed && <span className="text-gray-400 bg-gray-800/50 px-2 py-0.5 ml-2 text-xs rounded border border-gray-700">✓ Actuó</span>}
         {combatStateData?.isSurprised && <span className="text-purple-400 bg-purple-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-purple-800">❗ Sorprendido</span>}
@@ -242,15 +242,15 @@ export function GMView() {
   return (
     <div className="flex flex-col h-full p-4 gap-4 text-white">
       {/* Header de Combate */}
-      <div className="flex justify-between items-center bg-card/80 p-5 rounded-lg border border-gray-800 shadow-md backdrop-blur-sm">
+      <div className="flex justify-between items-center bg-anima-panel/80 p-5 rounded-lg border border-anima-gold/30 shadow-glass-gold backdrop-blur-md">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wide flex items-center gap-3">
+          <h1 className="text-3xl font-serif font-bold text-anima-gold tracking-wide flex items-center gap-3 drop-shadow-md">
             Consola del GM 
-            <span className="bg-gray-800 text-yellow-400 px-3 py-1 rounded-md text-sm border border-gray-700">
+            <span className="bg-black/50 text-anima-goldglow px-3 py-1 rounded-md text-sm border border-anima-gold/50 shadow-glow-gold font-sans">
               Asalto {combatState.round}
             </span>
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Campaña: La Sombra del Omega</p>
+          <p className="text-gray-400 text-sm mt-1 font-serif">Campaña: La Sombra del Omega</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <CombatCalculator />
@@ -268,9 +268,9 @@ export function GMView() {
       </div>
 
       {/* Grid de Jugadores */}
-      <Card className="flex-grow border-gray-800 bg-card/50">
+      <Card className="flex-grow border-anima-gold/20 bg-anima-panel/50 shadow-glass">
         <CardHeader>
-          <CardTitle>Jugadores Conectados</CardTitle>
+          <CardTitle className="font-serif text-2xl text-anima-goldglow tracking-wide drop-shadow-sm">Jugadores Conectados</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

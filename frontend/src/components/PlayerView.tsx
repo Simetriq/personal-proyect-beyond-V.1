@@ -170,17 +170,17 @@ export function PlayerView() {
       
       {/* Cola de Iniciativa */}
       {combatState.initiativeQueue.length > 0 && (
-        <div className="col-span-12 bg-gray-900/80 p-3 rounded-lg border border-gray-800 flex items-center gap-4 overflow-x-auto shadow-inner">
-          <span className="text-yellow-500 font-bold whitespace-nowrap">⏳ Orden de Asalto ({combatState.round}):</span>
+        <div className="col-span-12 bg-anima-panel/80 p-3 rounded-lg border border-anima-gold/20 flex items-center gap-4 overflow-x-auto shadow-glass-gold backdrop-blur-md">
+          <span className="text-anima-gold font-serif font-bold whitespace-nowrap drop-shadow-md">⏳ Orden de Asalto ({combatState.round}):</span>
           <div className="flex gap-2">
             {combatState.initiativeQueue.map((entry, index) => {
               const c = characters[entry.characterId];
               if (!c) return null;
               const isCurrent = index === combatState.turnIndex;
               return (
-                <div key={entry.characterId} className={`px-3 py-1 rounded text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition-colors ${isCurrent ? 'bg-yellow-600 text-white shadow-[0_0_15px_rgba(202,138,4,0.5)] border-yellow-400 border' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
+                <div key={entry.characterId} className={`px-3 py-1 rounded text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition-colors ${isCurrent ? 'bg-gradient-to-r from-anima-gold to-yellow-600 text-black shadow-glow-gold border-yellow-300 border' : 'bg-black/50 text-gray-400 border border-gray-700'}`}>
                   <span>{c.name}</span>
-                  <span className="bg-black/50 px-2 rounded text-xs text-yellow-200">{entry.initiative}</span>
+                  <span className="bg-black/50 px-2 rounded text-xs text-anima-gold">{entry.initiative}</span>
                 </div>
               );
             })}
@@ -193,76 +193,56 @@ export function PlayerView() {
         <div className="absolute inset-0 bg-red-700/20 z-50 pointer-events-none rounded-xl animate-pulse transition-all"></div>
       )}
 
-      {/* Panel Izquierdo: Estado Vital */}
-      <div className="col-span-3 flex flex-col gap-4">
-        <Card className={`bg-card/50 ${isUnconscious ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.15)]'}`}>
+      {/* Columna Izquierda: Estado Vital */}
+      <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
+        <Card className="border-anima-gold/30 shadow-glass-gold">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-red-500">
-              {isUnconscious ? "¡INCONSCIENTE!" : "Estado Vital"}
-            </CardTitle>
+            <CardTitle className="text-xl font-serif text-anima-blood drop-shadow-sm">Estado Vital</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-semibold text-gray-300">HP (Vida)</span>
-                <span className="text-red-400 font-bold">{hp} / {maxHp}</span>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-semibold text-gray-300 tracking-wide">HP (Vida)</span>
+                <span className="font-bold text-anima-blood">{hp} / {maxHp}</span>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-red-500 h-3 rounded-full transition-all duration-500" style={{ width: `${hpPercentage}%` }}></div>
-              </div>
-              
-              {/* Badges de Efectos Activos bajo la vida */}
-              {character.activeEffects && character.activeEffects.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {character.activeEffects.map((effect: any) => (
-                    <span key={effect.id} className="bg-red-950/80 text-red-300 text-xs px-2 py-1 rounded border border-red-900 shadow-sm flex items-center">
-                      {effect.type === 'SANGRADO' ? '🩸' : effect.type === 'VENENO' ? '🤢' : '⚠️'} 
-                      <span className="ml-1 font-bold">{effect.name}</span>
-                      <span className="ml-1 opacity-80">- {effect.value} PV ({effect.durationRounds} asaltos)</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div>
-              <div className="flex justify-between mb-1 items-center">
-                <span className="font-semibold text-gray-300">Ki</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-blue-400 font-bold">{character.ki || 0}</span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-800 rounded-full h-3 mt-1">
-                <div className="bg-blue-500 h-3 rounded-full" style={{ width: `${Math.min(100, ((character.ki || 0) / 50) * 100)}%` }}></div>
+              <div className="w-full bg-black/50 rounded-full h-3 border border-anima-blood/30 shadow-inner">
+                <div className="bg-gradient-to-r from-red-800 to-anima-blood h-3 rounded-full transition-all duration-500 shadow-glow-blood" style={{ width: `${hpPercentage}%` }}></div>
               </div>
             </div>
-            
+
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-semibold text-gray-300 tracking-wide">Ki</span>
+                <span className="font-bold text-anima-ki">{character.ki || 0}</span>
+              </div>
+              <div className="w-full bg-black/50 rounded-full h-3 border border-anima-ki/30 shadow-inner">
+                <div className="bg-gradient-to-r from-cyan-900 to-anima-ki h-3 rounded-full transition-all duration-500 shadow-glow-ki" style={{ width: `${Math.min(100, ((character.ki || 0) / 50) * 100)}%` }}></div>
+              </div>
+            </div>
+
             <div className="mt-4">
               <KiAccumulator characterId={CHARACTER_ID} />
             </div>
 
             <div>
-              <div className="flex justify-between mb-1 items-center">
-                <span className="font-semibold text-gray-300">Zeon</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-purple-400 font-bold">{character.zeon || 0}</span>
-                </div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-semibold text-gray-300 tracking-wide">Zeon</span>
+                <span className="font-bold text-anima-zeon">{character.zeon || 0}</span>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-purple-500 h-3 rounded-full transition-all" style={{ width: '100%' }}></div>
+              <div className="w-full bg-black/50 rounded-full h-3 border border-anima-zeon/30 shadow-inner">
+                <div className="bg-gradient-to-r from-purple-900 to-anima-zeon h-3 rounded-full transition-all duration-500 shadow-glow-zeon" style={{ width: '100%' }}></div>
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-gray-900 border border-gray-700 rounded-md">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-300">Cansancio (Fatiga)</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setFatigue(Math.max(0, fatigue - 1))} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">-</Button>
-                  <span className="text-yellow-400 font-bold w-4 text-center">{fatigue}</span>
-                  <Button variant="outline" size="sm" onClick={() => setFatigue(fatigue + 1)} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">+</Button>
-                </div>
+            <div className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-gray-800/50">
+              <span className="font-semibold text-gray-300">Cansancio (Fatiga)</span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setFatigue(Math.max(0, fatigue - 1))} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">-</Button>
+                <span className="text-anima-goldglow font-bold w-4 text-center">{fatigue}</span>
+                <Button variant="outline" size="sm" onClick={() => setFatigue(fatigue + 1)} className="h-6 w-6 p-0 border-gray-600 bg-gray-800 hover:bg-gray-700">+</Button>
               </div>
             </div>
-            
+
             {character.temporaryShield > 0 && (
               <div className="mt-4 p-3 bg-cyan-950/80 rounded border border-cyan-500/50 flex items-center justify-between shadow-[0_0_15px_rgba(6,182,212,0.2)]">
                 <div className="flex items-center gap-2">
@@ -270,6 +250,19 @@ export function PlayerView() {
                   <span className="text-cyan-300 font-bold">Escudo Místico Activo</span>
                 </div>
                 <span className="text-cyan-100 font-bold bg-cyan-900 px-3 py-1 rounded-full">{character.temporaryShield} HP</span>
+              </div>
+            )}
+
+            {/* Badges de Efectos Activos bajo la vida */}
+            {character.activeEffects && character.activeEffects.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {character.activeEffects.map((effect: any) => (
+                  <span key={effect.id} className="bg-red-950/80 text-red-300 text-xs px-2 py-1 rounded border border-red-900 shadow-sm flex items-center">
+                    {effect.type === 'SANGRADO' ? '🩸' : effect.type === 'VENENO' ? '🤢' : '⚠️'} 
+                    <span className="ml-1 font-bold">{effect.name}</span>
+                    <span className="ml-1 opacity-80">- {effect.value} PV ({effect.durationRounds} asaltos)</span>
+                  </span>
+                ))}
               </div>
             )}
           </CardContent>
