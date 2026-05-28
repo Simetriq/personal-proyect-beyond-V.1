@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Skull, Droplet, FlaskConical, Zap, ArrowRight, FastForward } from "lucide-react";
+import { Skull, Droplet, FlaskConical, Zap, ArrowRight, FastForward, Swords } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -59,10 +59,14 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
 
   return (
     <TableRow 
-      className={`transition-colors ${isUnconscious ? 'bg-red-950/40 border-red-900 hover:bg-red-900/40' : isActiveTurn ? 'bg-anima-gold/10 border-anima-gold shadow-glass-gold' : 'border-gray-800/50 hover:bg-white/5'}`}
+      className={`transition-colors ${isUnconscious ? 'bg-red-950/40 border-red-900 hover:bg-red-900/40' : isActiveTurn ? 'bg-anima-gold/10 border-l-4 border-l-anima-gold border-anima-gold shadow-glass-gold' : 'border-gray-800/50 hover:bg-white/5'}`}
     >
       <TableCell className="font-bold text-lg text-gray-200 font-serif">
-        {char.name} {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse font-sans">(Inconsciente)</span>}
+        <div className="flex items-center gap-2">
+          {isActiveTurn && <Swords className="w-5 h-5 text-anima-gold animate-pulse drop-shadow-[0_0_6px_rgba(197,160,89,0.8)]" />}
+          <span>{char.name}</span>
+        </div>
+        {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse font-sans">(Inconsciente)</span>}
         {combatStateData?.isDefensive && <span className="text-blue-300 bg-[#081a2a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-blue-800 font-serif shadow-inner">A la Defensiva</span>}
         {combatStateData?.hasActed && <span className="text-[#8b7355] bg-[#161411] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-[#3a2b1c] font-serif shadow-inner">Actuó</span>}
         {combatStateData?.isSurprised && <span className="text-purple-300 bg-[#1a082a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-purple-800 font-serif shadow-inner">Sorprendido</span>}
@@ -105,9 +109,18 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
       <TableCell>
         <div className="flex justify-between text-xs mb-1">
           <span className={`font-bold ${isUnconscious ? 'text-red-500' : 'text-red-400'}`}>{char.hp} / {char.maxHp}</span>
+          <span className={`font-bold text-[10px] uppercase tracking-wider ${hpPercentage > 60 ? 'text-emerald-400' : hpPercentage > 30 ? 'text-amber-400' : 'text-red-400'}`}>{Math.round(hpPercentage)}%</span>
         </div>
-        <div className="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800">
-          <div className={`h-2 rounded-full transition-all duration-500 ${isUnconscious ? 'bg-red-600' : 'bg-red-500'}`} style={{ width: `${hpPercentage}%` }}></div>
+        <div className="w-full bg-gray-900 rounded-full h-3 overflow-hidden border border-gray-800">
+          <div 
+            className={`h-3 rounded-full transition-all duration-500 ${
+              isUnconscious ? 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]' 
+              : hpPercentage > 60 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]' 
+              : hpPercentage > 30 ? 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.4)]' 
+              : 'bg-gradient-to-r from-red-700 to-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+            }`} 
+            style={{ width: `${hpPercentage}%` }}
+          ></div>
         </div>
       </TableCell>
       <TableCell>
@@ -117,7 +130,12 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
           <div className="text-cyan-400 text-[10px] uppercase tracking-wider font-bold mt-1 bg-[#081a2a] inline-block px-1.5 py-0.5 rounded border border-cyan-800">Escudo: {char.temporaryShield}</div>
         )}
       </TableCell>
-      <TableCell className="text-yellow-500 font-semibold">{char.gold}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1.5 text-yellow-500 font-semibold">
+          <img src="/assets/icons/gen_gold.webp" alt="Oro" className="w-4 h-4 object-contain drop-shadow-md" />
+          {char.gold}
+        </div>
+      </TableCell>
       <TableCell>
         <div className="text-white text-lg font-bold">
           {char.currentInitiative !== null ? char.currentInitiative : '-'}
@@ -220,26 +238,28 @@ function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: any, campaignId: st
           Añadir Enemigo
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-gray-950 border-red-900 text-white">
-        <DialogHeader>
-          <DialogTitle className="text-red-500">Invocar Enemigo (Memoria)</DialogTitle>
+      <DialogContent className="sm:max-w-[500px] bg-[#161411] border-[2px] border-[#3a2b1c] text-gray-200 shadow-[inset_0_0_20px_rgba(0,0,0,1),0_10px_30px_rgba(0,0,0,0.9)]" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-wood.png')" }}>
+        <DialogHeader className="border-b border-[#3a2b1c] pb-3">
+          <DialogTitle className="font-serif text-red-400 flex items-center gap-2 uppercase tracking-widest text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+            <Skull className="w-5 h-5 text-red-500" /> Invocar Enemigo
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <label className="text-right text-gray-400 text-sm">Nombre</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="col-span-3 border-gray-700 bg-gray-900 text-white" />
+            <label className="text-right text-[#8b7355] text-sm font-serif uppercase tracking-wider">Nombre</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="col-span-3 border-[#3a2b1c] bg-[#0a0806] text-gray-200 font-serif" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <label className="text-right text-gray-400 text-sm">HP Máximo</label>
-            <Input type="number" value={maxHp} onChange={(e) => setMaxHp(e.target.value)} className="col-span-3 border-gray-700 bg-gray-900 text-white" />
+            <label className="text-right text-[#8b7355] text-sm font-serif uppercase tracking-wider">HP Max</label>
+            <Input type="number" value={maxHp} onChange={(e) => setMaxHp(e.target.value)} className="col-span-3 border-[#3a2b1c] bg-[#0a0806] text-gray-200 font-serif" />
           </div>
-          <div className="mt-2 pt-4 border-t border-gray-800">
-            <h4 className="text-sm text-gray-400 mb-3 font-semibold text-center">TAs Base (Armadura)</h4>
+          <div className="mt-2 pt-4 border-t border-[#3a2b1c]">
+            <h4 className="text-sm text-[#c5a059] mb-3 font-semibold text-center font-serif uppercase tracking-widest">TAs Base (Armadura)</h4>
             <div className="grid grid-cols-4 gap-2">
               {Object.keys(ta).map((key) => (
                 <div key={key} className="flex flex-col gap-1 items-center">
-                  <label className="text-[10px] text-gray-500">{key}</label>
-                  <Input type="number" value={(ta as any)[key]} onChange={(e) => setTa({...ta, [key]: e.target.value})} className="h-8 text-center text-xs border-gray-700 bg-gray-900 text-white" />
+                  <label className="text-[10px] text-[#8b7355] font-serif uppercase tracking-wider">{key}</label>
+                  <Input type="number" value={(ta as any)[key]} onChange={(e) => setTa({...ta, [key]: e.target.value})} className="h-8 text-center text-xs border-[#3a2b1c] bg-[#0a0806] text-gray-200" />
                 </div>
               ))}
             </div>
@@ -247,7 +267,7 @@ function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: any, campaignId: st
         </div>
         <div className="flex justify-end pt-2">
           <DialogTrigger asChild>
-            <Button onClick={handleSpawn} className="bg-red-700 hover:bg-red-600 text-white font-bold w-full transition-all active:scale-95 duration-100">¡Invocar!</Button>
+            <Button onClick={handleSpawn} className="w-full btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] hover:from-red-900 hover:to-[#161411] border border-red-900 text-red-200 font-bold font-serif uppercase tracking-widest transition-all active:scale-95 duration-100 relative z-10">¡Invocar!</Button>
           </DialogTrigger>
         </div>
       </DialogContent>
@@ -346,7 +366,7 @@ export function GMView() {
         </CardContent>
       </Card>
 
-      <div className="mt-4 w-full md:w-1/2">
+      <div className="mt-4 w-full">
         <DiceRoller />
       </div>
     </div>
