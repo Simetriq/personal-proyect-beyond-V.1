@@ -64,4 +64,14 @@
   .btn-piedra-runica {
     @apply bg-gradient-to-b from-gray-800 to-gray-950 border-t border-gray-600 border-b-2 border-b-black shadow-lg hover:shadow-glow-gold hover:border-anima-gold transition-all duration-300 font-serif font-bold tracking-widest text-gray-300 hover:text-anima-goldglow;
   }
+
+  /* Hide Number Input Spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }

@@ -539,10 +539,10 @@ export function PlayerView() {
                 
                 <div className="grid grid-cols-2 gap-8 relative z-10">
                   {[
-                    { id: 'item-potion-minor', name: 'Poción de Vida Menor', cost: 10, type: 'CONSUMIBLE', icon: '/assets/icons/potion_minor.png?v=2', mods: null },
-                    { id: 'item-potion-major', name: 'Poción de Vida Mayor', cost: 30, type: 'CONSUMIBLE', icon: '/assets/icons/potion_major.png?v=2', mods: null },
-                    { id: 'item-antidote', name: 'Antídoto', cost: 15, type: 'CONSUMIBLE', icon: '/assets/icons/antidote.png?v=2', mods: null },
-                    { id: 'item-leather-armor', name: 'Coraza de Cuero', cost: 90, type: 'ARMADURA', icon: '/assets/icons/leather_armor.png?v=2', mods: { FIL: 2, CON: 1, PEN: 1 } },
+                    { id: 'item-potion-minor', name: 'Poción de Vida Menor', cost: 10, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_minor.png', mods: null },
+                    { id: 'item-potion-major', name: 'Poción de Vida Mayor', cost: 30, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_major.png', mods: null },
+                    { id: 'item-antidote', name: 'Antídoto', cost: 15, type: 'CONSUMIBLE', icon: '/assets/icons/gen_antidote.png', mods: null },
+                    { id: 'item-leather-armor', name: 'Coraza de Cuero', cost: 90, type: 'ARMADURA', icon: '/assets/icons/gen_leather_armor.png', mods: { FIL: 2, CON: 1, PEN: 1 } },
                   ].map(shopItem => (
                     <div key={shopItem.id} className="relative bg-[#161411] p-1.5 rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.9)] border border-[#111]">
                       {/* Marco exterior metálico */}

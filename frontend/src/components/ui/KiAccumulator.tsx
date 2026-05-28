@@ -33,18 +33,31 @@ export function KiAccumulator({ characterId }: { characterId: string }) {
           <div key={stat} className="flex flex-col gap-1 items-center bg-[#1a1714] p-2 rounded-md border-t border-l border-[#4a3b2c] border-b-2 border-r-2 border-black shadow-[inset_0_0_15px_rgba(0,0,0,0.8),0_5px_10px_rgba(0,0,0,0.5)] relative overflow-hidden group">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
             <span className="text-sm font-serif text-gray-400 uppercase tracking-widest relative z-10 group-hover:text-anima-goldglow transition-colors">{stat}</span>
-            <div className="flex items-center gap-1 relative z-10">
+            <div className="flex items-center gap-1 relative z-10 w-full px-2 justify-between bg-black/40 border border-[#3a2b1c] rounded py-0.5">
+              <button 
+                onClick={() => setAccumulations({...accumulations, [stat]: Math.max(0, val - 1)})}
+                className="text-[#8b7355] hover:text-anima-goldglow text-lg leading-none font-bold outline-none cursor-pointer select-none"
+              >
+                -
+              </button>
               <input 
                 type="number" 
                 value={val} 
                 onChange={(e) => setAccumulations({...accumulations, [stat]: parseInt(e.target.value) || 0})}
-                className="w-12 text-center bg-black/60 border border-[#3a2b1c] text-anima-goldglow text-lg font-bold outline-none rounded" 
+                className="w-8 text-center bg-transparent text-anima-goldglow text-lg font-bold outline-none" 
               />
+              <button 
+                onClick={() => setAccumulations({...accumulations, [stat]: val + 1})}
+                className="text-[#8b7355] hover:text-anima-goldglow text-lg leading-none font-bold outline-none cursor-pointer select-none"
+              >
+                +
+              </button>
             </div>
             <Button 
               onClick={() => handleAccumulate(stat as keyof typeof accumulations)}
               size="sm"
-              className="mt-2 w-full btn-piedra-runica bg-gradient-to-b from-gray-800 to-gray-950 text-[10px] h-6 px-1 relative z-10"
+              variant="outline"
+              className="mt-2 w-full btn-piedra-runica !text-gray-300 hover:!text-anima-goldglow bg-gradient-to-b from-gray-800 to-gray-950 text-[10px] h-6 px-1 relative z-10 border-none"
             >
               Acumular
             </Button>

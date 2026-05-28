@@ -13,13 +13,13 @@ const KiAbilityNode = ({ data }: { data: any }) => {
   
   let ringStyle = "border-gray-700 shadow-none";
   let bgStyle = "bg-[#161224]/50 opacity-40";
-  let icon = "🔮";
+  let iconSrc = "/assets/icons/gen_ki_default.png";
   let glowStyle = "";
 
-  if (ability.effectType === 'PASSIVE' || ability.effectType === 'UI_BADGE') icon = "📖";
-  else if (ability.effectType === 'DEFENSE') icon = "🛡️";
-  else if (ability.effectType === 'DAMAGE') icon = "💥";
-  else if (ability.effectType === 'BUFF') icon = "✨";
+  if (ability.effectType === 'PASSIVE' || ability.effectType === 'UI_BADGE') iconSrc = "/assets/icons/gen_ki_passive.png";
+  else if (ability.effectType === 'DEFENSE') iconSrc = "/assets/icons/gen_ki_defense.png";
+  else if (ability.effectType === 'DAMAGE') iconSrc = "/assets/icons/gen_ki_damage.png";
+  else if (ability.effectType === 'BUFF') iconSrc = "/assets/icons/gen_ki_buff.png";
 
   if (bought) {
     ringStyle = "border-anima-gold shadow-[0_0_25px_rgba(197,160,89,0.7)]";
@@ -41,10 +41,10 @@ const KiAbilityNode = ({ data }: { data: any }) => {
   }
 
   return (
-    <div className={`relative flex items-center justify-center w-20 h-20 rounded-full border-4 backdrop-blur-md transition-all duration-500 ${ringStyle} ${bgStyle} ${glowStyle} ${selectedOutline}`}>
+    <div className={`relative flex items-center justify-center w-20 h-20 rounded-full border-4 backdrop-blur-md transition-all duration-500 overflow-hidden ${ringStyle} ${bgStyle} ${glowStyle} ${selectedOutline}`}>
       <Handle type="target" position={Position.Top} className="opacity-0 w-4 h-4" />
       
-      <span className="text-3xl drop-shadow-md z-10 select-none pointer-events-none">{icon}</span>
+      <img src={iconSrc} alt={ability.effectType} className="w-[120%] h-[120%] object-cover object-center pointer-events-none drop-shadow-lg" />
       
       <div className="absolute -bottom-7 whitespace-nowrap bg-black/80 px-2 py-0.5 rounded text-xs font-serif text-anima-goldglow border border-[#4a3b2c] shadow-[0_2px_4px_rgba(0,0,0,0.8)] select-none pointer-events-none z-20">
         {ability.name}
