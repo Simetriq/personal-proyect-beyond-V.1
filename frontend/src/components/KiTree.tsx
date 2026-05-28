@@ -101,38 +101,50 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    const xOffsetPerDepth: Record<number, number> = {};
-
+    
+    // Agrupar nodos por profundidad para centrarlos correctamente
+    const nodesPerDepth: Record<number, any[]> = {};
     Object.values(KI_ABILITIES_DAG).forEach(ability => {
       const d = depths[ability.id];
-      if (xOffsetPerDepth[d] === undefined) xOffsetPerDepth[d] = 0;
+      if (!nodesPerDepth[d]) nodesPerDepth[d] = [];
+      nodesPerDepth[d].push(ability);
+    });
 
-      // Centrado simplificado ajustando el espacio X
-      const x = (xOffsetPerDepth[d] - 1) * 200; // -1 to center around 0 for initial view
-      const y = d * 180;
+    Object.entries(nodesPerDepth).forEach(([depthStr, depthNodes]) => {
+      const d = parseInt(depthStr);
+      const y = d * 140; // Espaciado vertical más compacto
       
-      xOffsetPerDepth[d] += 1;
+      const totalNodes = depthNodes.length;
+      const xSpacing = 140; // Espaciado horizontal para crear forma de diamante
+      const startX = -((totalNodes - 1) * xSpacing) / 2;
 
-      nodes.push({
-        id: ability.id,
-        type: 'kiNode',
-        position: { x, y },
-        data: {
-          ability,
-          bought: hasAbility(ability.id),
-          available: canBuy(ability),
-          active: isAbilityActive(ability.id),
-          isSelected: selectedAbilityId === ability.id
-        }
+      depthNodes.forEach((ability, index) => {
+        const x = startX + index * xSpacing;
+        
+        nodes.push({
+          id: ability.id,
+          type: 'kiNode',
+          position: { x, y },
+          data: {
+            ability,
+            bought: hasAbility(ability.id),
+            available: canBuy(ability),
+            active: isAbilityActive(ability.id),
+            isSelected: selectedAbilityId === ability.id
+          }
+        });
       });
+    });
 
+    Object.values(KI_ABILITIES_DAG).forEach(ability => {
       ability.prerequisites.forEach(pre => {
         const preBought = hasAbility(pre);
         edges.push({
           id: `e-${pre}-${ability.id}`,
           source: pre,
           target: ability.id,
-          animated: preBought, // Flujo animado si el nodo origen está comprado
+          type: 'straight', // Conexiones rectas como en la imagen de referencia
+          animated: preBought,
           style: { 
             stroke: preBought ? '#c5a059' : '#334155', 
             strokeWidth: preBought ? 3 : 2,
