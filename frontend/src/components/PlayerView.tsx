@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -23,6 +24,7 @@ export function PlayerView() {
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
+  const [isEffectsOpen, setIsEffectsOpen] = useState(false);
   const [targetId, setTargetId] = useState<string>("");
   const [fatigueToSpend, setFatigueToSpend] = useState(1);
   const [counterTimeLeft, setCounterTimeLeft] = useState<number>(0);
@@ -501,26 +503,39 @@ export function PlayerView() {
             )}
             
             <div className="p-3 bg-[#161411] border-[2px] border-[#3a2b1c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,1)]">
-              <div className="flex items-center gap-2 border-b border-[#3a2b1c] pb-2 mb-2">
-                <span className="text-xl">📜</span>
-                <h4 className="font-bold text-[#c5a059] text-xs uppercase tracking-widest font-serif">Registro de Efectos</h4>
-              </div>
-              {character.activeEffects && character.activeEffects.length > 0 ? (
-                character.activeEffects.map((effect: any) => (
-                  <div key={effect.id} className="text-xs p-2 bg-[#2a0808] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-2 flex items-center justify-between relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
-                    <div className="relative z-10 flex items-center gap-2">
-                      <span className="text-red-400 font-bold uppercase tracking-wider">{effect.name}</span>
-                      <span className="opacity-80">Dañará {effect.value} HP</span>
+              <button 
+                onClick={() => setIsEffectsOpen(!isEffectsOpen)}
+                className="w-full flex items-center justify-between border-b border-[#3a2b1c] pb-2 cursor-pointer hover:bg-[#2a2215] transition-colors rounded px-1"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📜</span>
+                  <h4 className="font-bold text-[#c5a059] text-xs uppercase tracking-widest font-serif">Registro de Efectos</h4>
+                </div>
+                <div className="text-[#c5a059]">
+                  {isEffectsOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+              </button>
+              
+              {isEffectsOpen && (
+                <div className="mt-2">
+                  {character.activeEffects && character.activeEffects.length > 0 ? (
+                    character.activeEffects.map((effect: any) => (
+                      <div key={effect.id} className="text-xs p-2 bg-[#2a0808] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-2 flex items-center justify-between relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
+                        <div className="relative z-10 flex items-center gap-2">
+                          <span className="text-red-400 font-bold uppercase tracking-wider">{effect.name}</span>
+                          <span className="opacity-80">Dañará {effect.value} HP</span>
+                        </div>
+                        <span className="relative z-10 text-[10px] font-bold text-red-300 bg-red-950 px-2 py-0.5 rounded border border-red-900/50">
+                          {effect.durationRounds} turnos
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs p-2 bg-[#0a0806] rounded border border-[#2a2215] text-[#5c4a35] shadow-inner italic font-serif text-center mt-2">
+                      Ningún mal acecha tu cuerpo.
                     </div>
-                    <span className="relative z-10 text-[10px] font-bold text-red-300 bg-red-950 px-2 py-0.5 rounded border border-red-900/50">
-                      {effect.durationRounds} turnos
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs p-2 bg-[#0a0806] rounded border border-[#2a2215] text-[#5c4a35] shadow-inner italic font-serif text-center">
-                  Ningún mal acecha tu cuerpo.
+                  )}
                 </div>
               )}
             </div>
