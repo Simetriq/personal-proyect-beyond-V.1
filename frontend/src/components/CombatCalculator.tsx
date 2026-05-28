@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Swords } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -25,8 +26,8 @@ export function CombatCalculator() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-red-600 text-red-500 hover:bg-red-950 hover:text-red-400 transition-all active:scale-95 duration-100">
-          ⚔️ Calculadora de Combate
+        <Button className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] hover:from-red-900 hover:to-[#161411] border border-red-900 text-red-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] flex items-center gap-2 relative z-10">
+          <Swords className="w-4 h-4 text-red-400" /> Calculadora de Combate
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] bg-gray-950 border-red-900 text-white">

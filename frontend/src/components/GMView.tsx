@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Skull, Droplet, FlaskConical, Zap, ArrowRight, FastForward } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -62,9 +63,9 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
     >
       <TableCell className="font-bold text-lg text-gray-200 font-serif">
         {char.name} {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse font-sans">(Inconsciente)</span>}
-        {combatStateData?.isDefensive && <span className="text-blue-400 bg-blue-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-blue-800">🛡️ A la Defensiva</span>}
-        {combatStateData?.hasActed && <span className="text-gray-400 bg-gray-800/50 px-2 py-0.5 ml-2 text-xs rounded border border-gray-700">✓ Actuó</span>}
-        {combatStateData?.isSurprised && <span className="text-purple-400 bg-purple-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-purple-800">❗ Sorprendido</span>}
+        {combatStateData?.isDefensive && <span className="text-blue-300 bg-[#081a2a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-blue-800 font-serif shadow-inner">A la Defensiva</span>}
+        {combatStateData?.hasActed && <span className="text-[#8b7355] bg-[#161411] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-[#3a2b1c] font-serif shadow-inner">Actuó</span>}
+        {combatStateData?.isSurprised && <span className="text-purple-300 bg-[#1a082a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-purple-800 font-serif shadow-inner">Sorprendido</span>}
         <div className="flex flex-col gap-1 mt-1">
           {char.activeEffects && char.activeEffects.map((eff: any) => (
             <span key={eff.id} className="text-xs text-red-400 bg-red-950/40 px-2 py-0.5 rounded border border-red-900/50 animate-in fade-in duration-300 zoom-in-95">
@@ -85,7 +86,7 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
         <div className="text-blue-400 text-xs font-semibold">Ki: {char.ki || 0}</div>
         <div className="text-purple-400 text-xs font-semibold mt-1">Zeon: {char.zeon || 0}</div>
         {char.temporaryShield > 0 && (
-          <div className="text-cyan-400 text-xs font-bold mt-1">🛡️ Escudo: {char.temporaryShield}</div>
+          <div className="text-cyan-400 text-[10px] uppercase tracking-wider font-bold mt-1 bg-[#081a2a] inline-block px-1.5 py-0.5 rounded border border-cyan-800">Escudo: {char.temporaryShield}</div>
         )}
       </TableCell>
       <TableCell className="text-yellow-500 font-semibold">{char.gold}</TableCell>
@@ -96,8 +97,8 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
       </TableCell>
       <TableCell className="text-right flex justify-end gap-2">
         {char.id.startsWith('npc_') && (
-          <Button onClick={() => removeNpc(char.id)} variant="destructive" size="sm" className="bg-red-700 hover:bg-red-600 text-white shadow-sm transition-all active:scale-95 duration-100" title="Matar / Remover">
-            🗑️
+          <Button onClick={() => removeNpc(char.id)} size="sm" className="w-8 h-8 p-0 btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] border border-red-900 hover:from-red-900 hover:to-[#161411] transition-all active:scale-95 duration-100 relative z-10" title="Matar / Remover">
+            <Skull className="w-4 h-4 text-red-200" />
           </Button>
         )}
         
@@ -105,28 +106,34 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
           <Button 
             disabled={isBleeding} 
             onClick={() => handleApplyEffect('SANGRADO')}
-            variant="outline" size="sm" className="bg-red-950 border-red-900 text-red-300 hover:bg-red-900 hover:text-white transition-all active:scale-95 px-2"
+            size="sm" className="w-8 h-8 p-0 btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] border border-red-900 hover:from-red-900 hover:to-[#161411] transition-all active:scale-95 text-red-500 relative z-10"
             title="Aplicar Sangrado"
-          >🩸</Button>
+          >
+            <Droplet className="w-4 h-4" />
+          </Button>
           <Button 
             disabled={isBleeding} 
             onClick={() => handleApplyEffect('VENENO')}
-            variant="outline" size="sm" className="bg-green-950 border-green-900 text-green-300 hover:bg-green-900 hover:text-white transition-all active:scale-95 px-2"
+            size="sm" className="w-8 h-8 p-0 btn-piedra-runica bg-gradient-to-b from-green-950 to-[#161411] border border-green-900 hover:from-green-900 hover:to-[#161411] transition-all active:scale-95 text-green-500 relative z-10"
             title="Aplicar Veneno"
-          >🤢</Button>
+          >
+            <FlaskConical className="w-4 h-4" />
+          </Button>
           <Button 
             disabled={isBleeding} 
             onClick={() => handleApplyEffect('PENALIZADOR')}
-            variant="outline" size="sm" className="bg-yellow-950 border-yellow-900 text-yellow-300 hover:bg-yellow-900 hover:text-white transition-all active:scale-95 px-2"
+            size="sm" className="w-8 h-8 p-0 btn-piedra-runica bg-gradient-to-b from-yellow-950 to-[#161411] border border-yellow-700 hover:from-yellow-900 hover:to-[#161411] transition-all active:scale-95 text-yellow-500 relative z-10"
             title="Aplicar Penalizador (Shock)"
-          >⚡</Button>
+          >
+            <Zap className="w-4 h-4" />
+          </Button>
         </div>
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:text-white transition-all active:scale-95 duration-100">Editar</Button>
+            <Button size="sm" className="h-8 px-3 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] transition-all active:scale-95 duration-100 font-serif uppercase text-[10px] tracking-widest shadow-md relative z-10">Editar</Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogContent className="bg-[#161411] border-[2px] border-[#3a2b1c] text-white shadow-[inset_0_0_20px_rgba(0,0,0,1)] font-serif" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-wood.png')" }}>
             <DialogHeader>
               <DialogTitle>Editar a {char.name}</DialogTitle>
             </DialogHeader>
@@ -180,8 +187,9 @@ function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: any, campaignId: st
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-red-600 text-red-500 hover:bg-red-950 hover:text-red-400 transition-all active:scale-95 duration-100">
-          💀 Añadir Enemigo
+        <Button className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] hover:from-red-900 hover:to-[#161411] border border-red-900 text-red-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] flex items-center gap-2 relative z-10">
+          <Skull className="w-4 h-4 text-red-400" />
+          Añadir Enemigo
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] bg-gray-950 border-red-900 text-white">
@@ -252,30 +260,31 @@ export function GMView() {
           </h1>
           <p className="text-gray-400 text-sm mt-1 font-serif">Campaña: La Sombra del Omega</p>
         </div>
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap relative z-10">
           <CombatCalculator />
           <AddEnemyModal spawnNpc={spawnNpc} campaignId={CAMPAIGN_ID} />
-          <Button onClick={requestInitiatives} variant="outline" className="border-yellow-600 text-yellow-500 hover:bg-yellow-950 hover:text-yellow-400 transition-all active:scale-95 duration-100">
+          <Button onClick={requestInitiatives} className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-xs font-serif uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
             {combatState.isRequestingInitiative ? 'Esperando Tiradas...' : 'Pedir Iniciativas'}
           </Button>
-          <Button onClick={nextTurn} className="bg-green-700 hover:bg-green-600 text-white transition-all active:scale-95 duration-100">
-            Siguiente Turno ➡️
+          <Button onClick={nextTurn} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-green-950 to-[#161411] hover:from-green-900 hover:to-[#161411] border border-green-900 text-green-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
+            Siguiente Turno <ArrowRight className="w-4 h-4 text-green-400" />
           </Button>
-          <Button onClick={nextRoundTick} className="bg-blue-600 hover:bg-blue-700 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold transition-all active:scale-95 duration-100 hover:scale-105">
-            Siguiente Asalto ⏩
+          <Button onClick={nextRoundTick} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-blue-950 to-[#161411] hover:from-blue-900 hover:to-[#161411] border border-blue-900 text-blue-200 shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold uppercase tracking-widest text-xs transition-all active:scale-95 duration-100 hover:scale-105 relative z-10">
+            Siguiente Asalto <FastForward className="w-4 h-4 text-blue-400" />
           </Button>
         </div>
       </div>
 
       {/* Grid de Jugadores */}
-      <Card className="flex-grow border-anima-gold/20 bg-anima-panel/50 shadow-glass">
-        <CardHeader>
-          <CardTitle className="font-serif text-2xl text-anima-goldglow tracking-wide drop-shadow-sm">Jugadores Conectados</CardTitle>
+      <Card className="flex-grow bg-[#0a0806] border-[2px] border-[#3a2b1c] rounded shadow-[0_5px_15px_rgba(0,0,0,1)] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
+        <CardHeader className="border-b border-[#3a2b1c] bg-[#161411] relative z-10 pb-3">
+          <CardTitle className="font-serif text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] tracking-wider drop-shadow-md uppercase">Jugadores Conectados</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative z-10 p-0 pt-2">
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800 hover:bg-transparent">
+              <TableRow className="border-[#3a2b1c] hover:bg-transparent text-[#8b7355] font-serif uppercase tracking-widest text-xs">
                 <TableHead>Personaje</TableHead>
                 <TableHead className="w-[200px]">Vida (HP)</TableHead>
                 <TableHead>Ki / Zeon</TableHead>

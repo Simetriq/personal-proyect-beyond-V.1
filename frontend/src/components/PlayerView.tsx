@@ -273,7 +273,7 @@ export function PlayerView() {
                 ) : (
                   <Button 
                     size="sm" 
-                    className="w-full h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-purple-900 to-black hover:from-purple-800 hover:to-purple-900 text-purple-200 border-purple-900 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
+                    className="w-full h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-purple-950 to-black hover:from-purple-900 hover:to-black text-purple-200 border border-purple-900 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10"
                     onClick={() => useCombatStore.getState().startChanneling(CHARACTER_ID!, 'spell_custom')}
                   >
                     Empezar a Canalizar
@@ -295,7 +295,7 @@ export function PlayerView() {
                 <Button variant="outline" size="sm" onClick={() => setFatigueToSpend(Math.min(character.currentFatigue ?? 5, fatigueToSpend + 1))} className="h-6 w-6 p-0 btn-piedra-runica bg-gradient-to-b from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border border-[#4a3b2c] text-[#8b7355] text-xs shadow-md">+</Button>
                 <Button 
                   size="sm" 
-                  className="flex-grow h-6 text-[9px] btn-piedra-runica bg-gradient-to-b from-blue-900 to-black hover:from-blue-800 hover:to-blue-900 border border-blue-900 text-blue-200 uppercase tracking-widest rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
+                  className="flex-grow h-6 text-[9px] btn-piedra-runica bg-gradient-to-b from-blue-950 to-black hover:from-blue-900 hover:to-black border border-blue-900 text-blue-200 uppercase tracking-widest rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10"
                   onClick={() => {
                     useCombatStore.getState().spendFatigue(CHARACTER_ID!, fatigueToSpend);
                   }}

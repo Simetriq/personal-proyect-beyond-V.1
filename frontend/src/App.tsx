@@ -48,9 +48,12 @@ function App() {
 
   return (
     <div className="h-screen w-screen bg-background overflow-hidden flex flex-col font-sans">
-      <div className="bg-anima-panel border-b border-anima-gold/20 p-2 flex justify-between items-center px-6 shadow-glass-gold z-10 relative">
-        <span className="font-bold font-serif text-anima-gold tracking-widest text-lg drop-shadow-md">ANIMA</span>
-        <Button variant="ghost" size="sm" onClick={() => setRole('NONE')} className="text-gray-400">
+      <div className="bg-[#0a0806] border-b-[2px] border-[#3a2b1c] p-1.5 flex justify-between items-center px-6 shadow-[0_5px_15px_rgba(0,0,0,1)] z-10 relative" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl drop-shadow-md">⚔️</span>
+          <span className="font-black font-serif text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] tracking-[0.3em] text-2xl drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">ANIMA</span>
+        </div>
+        <Button onClick={() => setRole('NONE')} className="h-8 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-[10px] font-bold font-serif uppercase tracking-widest shadow-[inset_0_0_5px_rgba(0,0,0,0.8),0_2px_5px_rgba(0,0,0,1)] relative z-10">
           Cambiar Rol
         </Button>
       </div>

@@ -31,7 +31,7 @@ export function DiceRoller({ characterId }: { characterId?: string }) {
           className="bg-[#0a0806] border border-[#3a2b1c] shadow-inner text-gray-200 text-sm flex-grow focus:border-anima-gold font-serif"
           style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/black-scales.png')" }}
         />
-        <Button onClick={handleRoll} className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-900 text-red-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)]">
+        <Button onClick={handleRoll} className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-red-950 to-[#161411] hover:from-red-900 hover:to-[#161411] border border-red-900 text-red-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
           Tirar
         </Button>
       </div>
