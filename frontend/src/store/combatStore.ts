@@ -3,6 +3,16 @@ import { io, Socket } from 'socket.io-client';
 
 export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';
 
+export interface DiceRoll {
+  characterId: string;
+  characterName: string;
+  result: number;
+  isFumble: boolean;
+  isOpen: boolean;
+  description: string;
+  timestamp: number;
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -17,6 +27,9 @@ export interface Character {
   currentInitiative: number | null;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
   kiAbilities: string[];
+  activeEffects?: any[];
+  maxZeon?: number;
+  maxKi?: number;
 }
 
 export interface CombatState {
@@ -26,16 +39,20 @@ export interface CombatState {
   isRequestingInitiative: boolean;
 }
 
-interface CombatStore {
+export interface CombatStore {
   socket: Socket | null;
+  isConnected: boolean;
+  hasSynced: boolean;
   characters: Record<string, Character>;
   campaignId: string | null;
   myCharacterId: string | null;
   combatState: CombatState;
+  diceRolls: DiceRoll[];
   
   setMyCharacterId: (id: string) => void;
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType) => void;
   createCharacter: (campaignId: string, characterId: string, data: any) => void;
   equipItem: (characterId: string, itemId: string) => void;
   unequipItem: (characterId: string, itemId: string) => void;
@@ -54,23 +71,31 @@ interface CombatStore {
   buyKiAbility: (characterId: string, abilityId: string) => void;
   activateKiAbility: (characterId: string, abilityId: string) => void;
   deactivateKiAbility: (characterId: string, abilityId: string) => void;
+
+  rollDice: (characterId: string, description: string) => void;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
   socket: null,
+  isConnected: false,
+  hasSynced: false,
   characters: {},
   campaignId: null,
-  myCharacterId: null,
+  myCharacterId: localStorage.getItem('anima_character_id') || null,
   combatState: {
     round: 1,
     turnIndex: -1,
     initiativeQueue: [],
     isRequestingInitiative: false
   },
+  diceRolls: [],
 
-  setMyCharacterId: (id: string) => set({ myCharacterId: id }),
+  setMyCharacterId: (id: string) => {
+    localStorage.setItem('anima_character_id', id);
+    set({ myCharacterId: id });
+  },
 
   connectToCampaign: (campaignId: string) => {
     if (get().socket) return;
@@ -79,7 +104,23 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
     socket.on('connect', () => {
       console.log('Conectado al servidor de Anima Combat');
+      set({ isConnected: true });
       socket.emit('join_campaign', campaignId);
+    });
+
+    socket.on('disconnect', () => {
+      set({ isConnected: false, hasSynced: false });
+    });
+
+    socket.on('attack_resolved', (data: any) => {
+      console.log('Ataque resuelto', data);
+      // Podríamos mostrar un toast notification aquí
+    });
+
+    socket.on('dice_rolled', (roll: DiceRoll) => {
+      set((state) => ({
+        diceRolls: [roll, ...state.diceRolls].slice(0, 50) // Mantener las últimas 50 tiradas
+      }));
     });
 
     socket.on('character_updated', (data: any) => {
@@ -109,7 +150,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     });
 
     socket.on('combat_state_updated', (data: CombatState) => {
-      set({ combatState: data });
+      set({ combatState: data, hasSynced: true });
     });
 
     socket.on('character_removed', (characterId: string) => {
@@ -118,6 +159,11 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         delete newCharacters[characterId];
         return { characters: newCharacters };
       });
+    });
+
+    socket.on('attack_resolved', (data: any) => {
+      // Opcional: mostrar una notificación o toast en el frontend con el resultado del combate.
+      console.log('Resultado de combate:', data.result.message);
     });
 
     set({ socket, campaignId });
@@ -131,6 +177,21 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         characterId,
         amount,
         type
+      });
+    }
+  },
+
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('resolve_attack', {
+        campaignId,
+        attackerId,
+        defenderId,
+        attackRoll,
+        defenseRoll,
+        baseDamage,
+        damageType
       });
     }
   },
@@ -255,6 +316,32 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('deactivate_ki_ability', { campaignId, characterId, abilityId });
+    }
+  },
+
+  rollDice: (characterId: string, description: string) => {
+    const { socket, campaignId, characters } = get();
+    if (socket && campaignId) {
+      let charName = "Director de Juego";
+      if (characterId !== 'gm') {
+        const char = characters[characterId];
+        if (!char) return;
+        charName = char.name;
+      }
+      
+      const result = Math.floor(Math.random() * 100) + 1;
+      const isFumble = result <= 3;
+      const isOpen = result >= 90;
+
+      socket.emit('roll_dice', { 
+        campaignId, 
+        characterId, 
+        characterName: charName, 
+        result, 
+        isFumble, 
+        isOpen, 
+        description 
+      });
     }
   }
 }));

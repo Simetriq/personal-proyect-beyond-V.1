@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Character } from '../domain/Character';
+import { Character, Item } from '../domain/Character';
 
 export class CharacterRepository {
   private prisma: PrismaClient;
@@ -10,13 +10,37 @@ export class CharacterRepository {
 
   async findById(id: string): Promise<Character | null> {
     const data = await this.prisma.character.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        inventoryItems: {
+          include: { item: true }
+        }
+      }
     });
 
     if (!data) return null;
 
     // Hidratación
-    return new Character(data);
+    const inventoryDict: Record<string, Item> = {};
+    if (data.inventoryItems) {
+      for (const inv of data.inventoryItems) {
+        inventoryDict[inv.item.id] = {
+          id: inv.item.id,
+          name: inv.item.name,
+          quantity: inv.quantity,
+          type: inv.item.type as any,
+          equipped: inv.equipped,
+          modifiers: inv.item.modifiers as any
+        };
+      }
+    }
+
+    const domainData = {
+      ...data,
+      inventory: inventoryDict
+    };
+
+    return new Character(domainData);
   }
 
   async create(data: any): Promise<Character> {
@@ -32,49 +56,72 @@ export class CharacterRepository {
         initiative_base: 0,
         gold: data.gold,
         resistances: data.resistances,
-        inventory: {
-          'item-1': {
-            id: 'item-1',
-            name: 'Poción de Vida Menor',
-            quantity: 3,
-            type: 'CONSUMIBLE',
-            equipped: false
-          },
-          'item-2': {
-            id: 'item-2',
-            name: 'Coraza de Cuero',
-            quantity: 1,
-            type: 'ARMADURA',
-            equipped: false,
-            modifiers: { FIL: 2, CON: 1, PEN: 1 }
-          }
-        },
         dotes: []
+      },
+      include: {
+        inventoryItems: { include: { item: true } }
       }
     });
 
-    return new Character(dbChar);
+    return new Character({ ...dbChar, inventory: {} });
   }
 
   async save(character: Character): Promise<void> {
-    // Deshidratación
-    await this.prisma.character.update({
-      where: { id: character.id },
-      data: {
-        hp: character.currentHp,
-        gold: character.gold,
-        // Guardamos las resistencias BASE de vuelta como JSON
-        resistances: {
-          FIL: character.baseResistances.FIL,
-          CON: character.baseResistances.CON,
-          PEN: character.baseResistances.PEN,
-          CAL: character.baseResistances.CAL,
-          ELE: character.baseResistances.ELE,
-          FRI: character.baseResistances.FRI,
-          ENE: character.baseResistances.ENE
-        },
-        inventory: character.inventory ? JSON.parse(JSON.stringify(character.inventory)) : {},
-        dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : []
+    // Deshidratación con transacción para manejar relaciones de inventario
+    await this.prisma.$transaction(async (tx) => {
+      await tx.character.update({
+        where: { id: character.id },
+        data: {
+          hp: character.currentHp,
+          gold: character.gold,
+          ki: character.ki,
+          zeon: character.zeon,
+          kiAbilities: character.kiAbilities,
+          resistances: {
+            FIL: character.baseResistances.FIL,
+            CON: character.baseResistances.CON,
+            PEN: character.baseResistances.PEN,
+            CAL: character.baseResistances.CAL,
+            ELE: character.baseResistances.ELE,
+            FRI: character.baseResistances.FRI,
+            ENE: character.baseResistances.ENE
+          },
+          dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : []
+        }
+      });
+
+      // Actualizar Inventario
+      await tx.inventoryItem.deleteMany({
+        where: { characterId: character.id }
+      });
+
+      const invArray = Object.values(character.inventory);
+      for (const item of invArray) {
+        // Asegurarse de que el Item exista en la base de datos
+        // Prisma upsert por ID fallará si el ID es un auto-generado o si item.id no existe.
+        // Pero item.id lo mandamos como string UUID.
+        
+        // Comprobar si existe primero (upsert en ID no funciona si ID no está marcado como @unique además de @id a veces, pero probemos)
+        let dbItem = await tx.item.findUnique({ where: { id: item.id } });
+        if (!dbItem) {
+          dbItem = await tx.item.create({
+            data: {
+              id: item.id,
+              name: item.name,
+              type: item.type,
+              modifiers: item.modifiers ? JSON.parse(JSON.stringify(item.modifiers)) : undefined
+            }
+          });
+        }
+
+        await tx.inventoryItem.create({
+          data: {
+            characterId: character.id,
+            itemId: dbItem.id,
+            quantity: item.quantity,
+            equipped: item.equipped
+          }
+        });
       }
     });
   }

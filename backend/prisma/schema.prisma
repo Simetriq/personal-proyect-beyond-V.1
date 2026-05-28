@@ -37,12 +37,12 @@ model Character {
   initiative_base Int
   gold            Float          @default(0)
   resistances     Json
-  inventory       Json
   dotes           Json
   kiAbilities     Json           @default("[]")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   activeEffects   ActiveEffect[]
+  inventoryItems  InventoryItem[]
   campaign        Campaign       @relation(fields: [campaignId], references: [id])
 }
 
@@ -67,4 +67,27 @@ model KiAbility {
   description       String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   // "WEAPON", "ARMOR", "CONSUMABLE", "MISC"
+  baseDamage  Int?
+  modifiers   Json?    // e.g. { "FIL": 10, "CON": 5 }
+  weight      Float?
+  price       Float?
+  inventoryItems InventoryItem[]
+}
+
+model InventoryItem {
+  id          String   @id @default(uuid())
+  characterId String
+  itemId      String
+  quantity    Int      @default(1)
+  equipped    Boolean  @default(false)
+  
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id])
 }

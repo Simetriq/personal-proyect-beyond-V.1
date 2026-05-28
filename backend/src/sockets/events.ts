@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { CharacterRepository } from '../repositories/CharacterRepository';
 import { ABILITIES_REGISTRY } from '../domain/abilitiesRegistry';
 import { BuyKiAbilityCommand, ActivateKiAbilityCommand, DeactivateKiAbilityCommand } from '../domain/ki/KiCommands';
+import { resolveAttack } from '../engine/combatResolution';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
@@ -50,9 +51,60 @@ export function setupSocketEvents(io: Server) {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
     // Une al socket a la sala de la campaña
-    socket.on('join_campaign', (campaignId: string) => {
+    socket.on('join_campaign', async (campaignId: string) => {
       socket.join(campaignId);
       console.log(`[Socket] ${socket.id} joined campaign ${campaignId}`);
+      
+      try {
+        const repo = new CharacterRepository(prisma);
+        const dbCharacters = await prisma.character.findMany({ where: { campaignId } });
+        
+        for (const dbChar of dbCharacters) {
+          const character = await repo.findById(dbChar.id);
+          if (character) {
+            socket.emit('character_updated', {
+              characterId: character.id,
+              name: character.name,
+              hp: character.currentHp,
+              maxHp: character.maxHp,
+              gold: character.gold,
+              state: character.state,
+              resistances: character.resistances,
+              inventory: character.inventory,
+              activeEffects: character.activeEffects,
+              ki: character.ki,
+              zeon: character.zeon,
+              temporaryShield: character.temporaryShield,
+              currentInitiative: character.currentInitiative,
+              kiAbilities: character.kiAbilities
+            });
+          }
+        }
+
+        const npcs = getCampaignNpcs(campaignId);
+        for (const npc of npcs.values()) {
+            socket.emit('character_updated', {
+              characterId: npc.id,
+              name: npc.name,
+              hp: npc.currentHp,
+              maxHp: npc.maxHp,
+              gold: npc.gold,
+              state: npc.state,
+              resistances: npc.resistances,
+              inventory: npc.inventory,
+              activeEffects: npc.activeEffects,
+              ki: npc.ki,
+              zeon: npc.zeon,
+              temporaryShield: npc.temporaryShield,
+              currentInitiative: npc.currentInitiative,
+              kiAbilities: npc.kiAbilities
+            });
+        }
+        
+        socket.emit('combat_state_updated', getCombatState(campaignId));
+      } catch (e) {
+        console.error('[Socket] Error on join_campaign sync:', e);
+      }
     });
 
     // Actualiza y retransmite el cambio de una estadística
@@ -200,6 +252,39 @@ export function setupSocketEvents(io: Server) {
       } catch (e) {
         console.error('[Socket] Error applying damage:', e);
       }
+    });
+
+    socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string }) => {
+      const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType } = data;
+      try {
+        const attacker = await loadCharacter(campaignId, attackerId);
+        const defender = await loadCharacter(campaignId, defenderId);
+        if (!attacker || !defender) return;
+
+        const ta = defender.resistances.getResistanceByType(damageType);
+        const result = resolveAttack(attackRoll, defenseRoll, baseDamage, ta);
+
+        if (result.damage > 0) {
+          defender.applyResolvedDamage(result.damage);
+          await saveCharacter(defender);
+          broadcastCharacterUpdate(campaignId, defender);
+        }
+
+        io.to(campaignId).emit('attack_resolved', {
+          attackerId,
+          defenderId,
+          result
+        });
+      } catch (e) {
+        console.error('[Socket] Error resolving attack:', e);
+      }
+    });
+
+    socket.on('roll_dice', (data: { campaignId: string, characterId: string, characterName: string, result: number, isFumble: boolean, isOpen: boolean, description: string }) => {
+      io.to(data.campaignId).emit('dice_rolled', {
+        ...data,
+        timestamp: Date.now()
+      });
     });
 
     socket.on('apply_effect', async (data: { campaignId: string, characterId: string, effect: any }) => {

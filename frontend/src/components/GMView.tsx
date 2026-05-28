@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "./ui/input";
 import { v4 as uuidv4 } from "uuid";
 import { useCombatStore } from "../store/combatStore";
+import { CombatCalculator } from "./CombatCalculator";
+import { DiceRoller } from "./ui/DiceRoller";
 
 function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: any, gmUpdateCharacter: any, applyEffect: any, isActiveTurn: boolean, removeNpc: any }) {
   const [hp, setHp] = useState(char.hp);
@@ -248,6 +250,7 @@ export function GMView() {
           <p className="text-gray-400 text-sm mt-1">Campaña: La Sombra del Omega</p>
         </div>
         <div className="flex gap-3 flex-wrap">
+          <CombatCalculator />
           <AddEnemyModal spawnNpc={spawnNpc} campaignId={CAMPAIGN_ID} />
           <Button onClick={requestInitiatives} variant="outline" className="border-yellow-600 text-yellow-500 hover:bg-yellow-950 hover:text-yellow-400 transition-all active:scale-95 duration-100">
             {combatState.isRequestingInitiative ? 'Esperando Tiradas...' : 'Pedir Iniciativas'}
@@ -301,6 +304,10 @@ export function GMView() {
           </Table>
         </CardContent>
       </Card>
+
+      <div className="mt-4 w-full md:w-1/2">
+        <DiceRoller />
+      </div>
     </div>
   );
 }

@@ -8,9 +8,11 @@ import { useCombatStore, type DamageType } from "../store/combatStore";
 import { CreateCharacterForm } from "./CreateCharacterForm";
 import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 import { KiTree } from "./KiTree";
+import { KiAccumulator } from "./ui/KiAccumulator";
+import { DiceRoller } from "./ui/DiceRoller";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
@@ -50,6 +52,17 @@ export function PlayerView() {
       handleApplyDamage();
     }
   };
+
+  if (!hasSynced) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-amber-500 text-xl font-bold animate-pulse tracking-widest">Sincronizando Anima...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!character || !CHARACTER_ID) {
     return <CreateCharacterForm campaignId={CAMPAIGN_ID} />;
@@ -147,10 +160,15 @@ export function PlayerView() {
                   <span className="text-blue-400 font-bold">{character.ki || 0}</span>
                 </div>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-3">
-                <div className="bg-blue-500 h-3 rounded-full transition-all" style={{ width: '100%' }}></div>
+              <div className="w-full bg-gray-800 rounded-full h-3 mt-1">
+                <div className="bg-blue-500 h-3 rounded-full" style={{ width: `${Math.min(100, ((character.ki || 0) / 50) * 100)}%` }}></div>
               </div>
             </div>
+            
+            <div className="mt-4">
+              <KiAccumulator characterId={CHARACTER_ID} />
+            </div>
+
             <div>
               <div className="flex justify-between mb-1 items-center">
                 <span className="font-semibold text-gray-300">Zeon</span>
@@ -302,6 +320,9 @@ export function PlayerView() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Lanzador de Dados */}
+        <DiceRoller characterId={CHARACTER_ID} />
       </div>
 
       <div className="col-span-6 h-full z-10">

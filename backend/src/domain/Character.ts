@@ -16,7 +16,7 @@ export interface ItemModifier {
 export interface ActiveEffect {
   id: string;
   name: string;
-  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA' | 'BUF_STAT';
+  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA' | 'BUF_STAT' | 'ATURDIDO' | 'CEGUERA' | 'PARALISIS' | 'SORPRESA';
   value: number;
   durationRounds: number;
   statName?: string; // Para identificar qué stat afecta (ej. 'FUE', 'DES')
@@ -264,6 +264,29 @@ export class Character {
     this.currentHp -= finalDamage;
 
     // Verificamos estado inconsciente
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
+      this.state = 'INCONSCIENTE';
+    }
+  }
+
+  applyResolvedDamage(damage: number): void {
+    if (damage <= 0 || this.state === 'MUERTO') return;
+
+    let remainingDamage = damage;
+
+    if (this.temporaryShield > 0) {
+      if (this.temporaryShield >= remainingDamage) {
+        this.temporaryShield -= remainingDamage;
+        return;
+      } else {
+        remainingDamage -= this.temporaryShield;
+        this.temporaryShield = 0;
+      }
+    }
+
+    this.currentHp -= remainingDamage;
+
     if (this.currentHp <= 0) {
       this.currentHp = 0;
       this.state = 'INCONSCIENTE';
