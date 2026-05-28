@@ -154,7 +154,7 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
   const isActive = selectedAbility ? character.activeEffects?.some((e: any) => e.id === `ki_${selectedAbility.id}`) : false;
 
   return (
-    <div className="flex h-[80vh] w-full bg-[#0a0b0e] border border-[#2a253a] rounded-lg overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,0.9)] relative">
+    <div className="flex h-[calc(100vh-160px)] min-h-[500px] w-full bg-[#0a0b0e] border border-[#2a253a] rounded-lg overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,0.9)] relative">
       
       {/* Fondo Espacial Animado / Mágico */}
       <div className="absolute inset-0 pointer-events-none opacity-40 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] mix-blend-screen"></div>
@@ -179,10 +179,14 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
           onNodeClick={onNodeClick}
           onPaneClick={() => setSelectedAbilityId(null)}
           fitView
-          className="bg-transparent"
+          className="bg-transparent w-full h-full"
+          proOptions={{ hideAttribution: true }}
         >
           <Background color="rgba(255,255,255,0.05)" gap={30} size={2} />
-          <Controls className="bg-slate-900 border-slate-700 fill-anima-gold text-anima-gold" />
+          <Controls 
+            position="bottom-left" 
+            className="mb-6 ml-2 flex flex-col gap-1 bg-transparent shadow-none border-none [&>button]:!bg-[#161224] [&>button]:!border [&>button]:!border-[#4a3b2c] [&>button]:!rounded [&>button]:!shadow-md [&>button:hover]:!bg-[#2a2215] [&>button_svg]:!fill-[#c5a059] [&>button_svg]:!w-4 [&>button_svg]:!h-4" 
+          />
         </ReactFlow>
       </div>
 

@@ -74,4 +74,39 @@
   input[type="number"] {
     -moz-appearance: textfield;
   }
+  
+  /* Custom Scrollbar for Dark Fantasy Theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0b0e; 
+    border-left: 1px solid #2a253a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3a2b1c; 
+    border-radius: 4px;
+    border: 1px solid #1a1714;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c5a059; 
+  }
+
+  /* React Flow Custom Controls */
+  .react-flow__controls {
+    box-shadow: 0 0 10px rgba(0,0,0,0.8) !important;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .react-flow__controls-button {
+    background-color: #161224 !important;
+    border-bottom: 1px solid #3a2b1c !important;
+  }
+  .react-flow__controls-button:hover {
+    background-color: #2a2215 !important;
+  }
+  .react-flow__controls-button svg {
+    fill: #c5a059 !important;
+  }
 }

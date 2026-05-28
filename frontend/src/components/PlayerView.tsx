@@ -533,7 +533,7 @@ export function PlayerView() {
                 <div className="flex justify-between items-center mb-6 relative z-10 border-b border-[#4a3b2c] pb-2">
                   <h3 className="text-2xl font-serif font-bold text-anima-gold tracking-widest drop-shadow-md">Mercader Local</h3>
                   <span className="text-anima-gold font-bold flex items-center gap-2 bg-[#1a1714] px-4 py-1 rounded-full border border-[#4a3b2c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
-                    <span className="text-xl">💰</span> {gold} Oro
+                    <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-6 h-6 object-contain drop-shadow-md" /> {gold} Oro
                   </span>
                 </div>
                 
@@ -577,7 +577,7 @@ export function PlayerView() {
                                 disabled={gold < shopItem.cost}
                                 className="h-8 btn-piedra-runica bg-gradient-to-b from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border-2 border-anima-gold text-anima-gold text-xs font-bold rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)] disabled:opacity-50 disabled:border-gray-600 disabled:text-gray-500"
                               >
-                                Comprar ({shopItem.cost} <span className="text-[10px]">💰</span>)
+                                Comprar ({shopItem.cost} <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-3 h-3 object-contain inline-block ml-0.5" />)
                               </Button>
                             </div>
                           </div>
@@ -587,10 +587,8 @@ export function PlayerView() {
                   ))}
                 </div>
               </TabsContent>
-              <TabsContent value="ki" className="h-full m-0">
-                <div className="h-[600px] overflow-y-auto rounded border border-gray-800">
-                  <KiTree characterId={CHARACTER_ID} />
-                </div>
+              <TabsContent value="ki" className="h-full m-0 p-0">
+                <KiTree characterId={CHARACTER_ID} />
               </TabsContent>
             </CardContent>
           </Tabs>
