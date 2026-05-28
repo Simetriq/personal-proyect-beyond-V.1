@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { Info } from 'lucide-react'
 import { PlayerView } from './components/PlayerView'
 import { GMView } from './components/GMView'
 import { Button } from './components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog'
 
 function App() {
   const [role, setRole] = useState<'NONE' | 'PLAYER' | 'GM'>('NONE')
@@ -41,6 +43,45 @@ function App() {
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <span className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider text-center leading-tight">Game<br/>Master</span>
           </button>
+        </div>
+        
+        <div className="absolute top-4 right-4 z-20">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" className="w-12 h-12 rounded-full flex items-center justify-center bg-[#2a2215] border-[2px] border-[#c5a059] hover:border-[#fcd97b] hover:bg-[#3a2b1c] text-[#c5a059] hover:text-[#fcd97b] transition-all shadow-[0_0_15px_rgba(0,0,0,0.8)] relative z-10 group" title="Información sobre los Roles">
+                <Info className="w-6 h-6 drop-shadow-[0_0_8px_rgba(197,160,89,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(197,160,89,1)]" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto z-50 bg-[#161411] border-[2px] border-[#c5a059] text-gray-200 shadow-[inset_0_0_30px_rgba(0,0,0,1),0_10px_40px_rgba(0,0,0,0.9)]" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-wood.png')" }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2a2215]/40 to-transparent pointer-events-none"></div>
+              <DialogHeader className="border-b border-[#3a2b1c] pb-4 relative z-10">
+                <DialogTitle className="font-serif text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] uppercase tracking-widest text-center drop-shadow-md">
+                  Roles en el VTT
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-6 py-4 font-serif relative z-10">
+                <div className="bg-[#0a0806]/80 p-4 rounded border border-[#3a2b1c] shadow-[inset_0_0_15px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-lg font-bold text-anima-gold mb-2 uppercase tracking-wide flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-anima-gold drop-shadow-[0_0_5px_rgba(197,160,89,1)]"></span> 
+                    Rol de Jugador
+                  </h3>
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    Accede a tu ficha de personaje personal. Podrás gestionar tus puntos de vida, fatiga, oro e inventario. Tendrás la opción de declarar ataques, defensas y tirar iniciativas, así como activar tus Dominios de Ki o Magia. Todo lo que hagas será sincronizado automáticamente con el Game Master.
+                  </p>
+                </div>
+
+                <div className="bg-[#0a0806]/80 p-4 rounded border border-[#3a2b1c] shadow-[inset_0_0_15px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-lg font-bold text-anima-zeon mb-2 uppercase tracking-wide flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-anima-zeon drop-shadow-[0_0_5px_rgba(139,92,246,1)]"></span> 
+                    Rol de Game Master
+                  </h3>
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    Dirige la campaña. Tendrás un panel general donde podrás visualizar a todos los jugadores conectados y añadir NPCs al combate. Usa la Calculadora de Combate para resolver automáticamente los impactos entre personajes, calculando armaduras, pifias, penalizadores y daño crítico en tiempo real.
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     )
