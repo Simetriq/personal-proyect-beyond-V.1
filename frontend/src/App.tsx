@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Info } from 'lucide-react'
+import { Info, BookOpen } from 'lucide-react'
 import { PlayerView } from './components/PlayerView'
 import { GMView } from './components/GMView'
+import { GuideView } from './components/GuideView'
 import { Button } from './components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog'
 
 function App() {
-  const [role, setRole] = useState<'NONE' | 'PLAYER' | 'GM'>('NONE')
+  const [role, setRole] = useState<'NONE' | 'PLAYER' | 'GM' | 'GUIDE'>('NONE')
 
   useEffect(() => {
     // Force dark mode on mount
@@ -42,6 +43,16 @@ function App() {
           >
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <span className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider text-center leading-tight">Game<br/>Master</span>
+          </button>
+        </div>
+
+        <div className="mt-8 relative z-10">
+          <button 
+            onClick={() => setRole('GUIDE')}
+            className="px-8 py-3 rounded border-[2px] border-[#c5a059] bg-[#161411]/80 hover:bg-[#2a2215] text-[#c5a059] hover:text-[#fcd97b] hover:shadow-[0_0_15px_rgba(197,160,89,0.5)] transition-all font-serif font-bold tracking-widest uppercase flex items-center gap-2 group"
+          >
+            <BookOpen className="w-5 h-5 group-hover:drop-shadow-[0_0_8px_rgba(197,160,89,0.8)]" />
+            Códice / Guía
           </button>
         </div>
         
@@ -94,12 +105,19 @@ function App() {
           <span className="text-2xl drop-shadow-md">⚔️</span>
           <span className="font-black font-serif text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] tracking-[0.3em] text-2xl drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">ANIMA</span>
         </div>
-        <Button onClick={() => setRole('NONE')} className="h-8 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-[10px] font-bold font-serif uppercase tracking-widest shadow-[inset_0_0_5px_rgba(0,0,0,0.8),0_2px_5px_rgba(0,0,0,1)] relative z-10">
-          Cambiar Rol
-        </Button>
+        <div className="flex gap-2 relative z-10">
+          <Button onClick={() => setRole('GUIDE')} className="h-8 px-4 btn-piedra-runica bg-gradient-to-b from-[#161411] to-[#0a0806] border border-[#c5a059]/50 text-[#c5a059] hover:from-[#2a2215] hover:to-[#161411] text-[10px] font-bold font-serif uppercase tracking-widest shadow-[inset_0_0_5px_rgba(0,0,0,0.8)]">
+            <BookOpen className="w-3 h-3 mr-2" /> Guía
+          </Button>
+          <Button onClick={() => setRole('NONE')} className="h-8 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-[10px] font-bold font-serif uppercase tracking-widest shadow-[inset_0_0_5px_rgba(0,0,0,0.8),0_2px_5px_rgba(0,0,0,1)]">
+            Cambiar Rol
+          </Button>
+        </div>
       </div>
       <div className="flex-grow overflow-auto relative z-0">
-        {role === 'PLAYER' ? <PlayerView /> : <GMView />}
+        {role === 'PLAYER' && <PlayerView />}
+        {role === 'GM' && <GMView />}
+        {role === 'GUIDE' && <GuideView />}
       </div>
     </div>
   )
