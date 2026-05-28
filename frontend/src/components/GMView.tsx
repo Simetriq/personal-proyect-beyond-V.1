@@ -9,7 +9,7 @@ import { useCombatStore } from "../store/combatStore";
 import { CombatCalculator } from "./CombatCalculator";
 import { DiceRoller } from "./ui/DiceRoller";
 
-function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: any, gmUpdateCharacter: any, applyEffect: any, isActiveTurn: boolean, removeNpc: any }) {
+function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: any, combatStateData: any, gmUpdateCharacter: any, applyEffect: any, isActiveTurn: boolean, removeNpc: any }) {
   const [hp, setHp] = useState(char.hp);
   const [gold, setGold] = useState(char.gold);
   const [isBleeding, setIsBleeding] = useState(false);
@@ -62,6 +62,9 @@ function GMCharacterRow({ char, gmUpdateCharacter, applyEffect, isActiveTurn, re
     >
       <TableCell className="font-bold text-lg text-gray-200">
         {char.name} {isUnconscious && <span className="text-red-500 text-xs ml-2 uppercase animate-pulse">(Inconsciente)</span>}
+        {combatStateData?.isDefensive && <span className="text-blue-400 bg-blue-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-blue-800">🛡️ A la Defensiva</span>}
+        {combatStateData?.hasActed && <span className="text-gray-400 bg-gray-800/50 px-2 py-0.5 ml-2 text-xs rounded border border-gray-700">✓ Actuó</span>}
+        {combatStateData?.isSurprised && <span className="text-purple-400 bg-purple-900/30 px-2 py-0.5 ml-2 text-xs rounded border border-purple-800">❗ Sorprendido</span>}
         <div className="flex flex-col gap-1 mt-1">
           {char.activeEffects && char.activeEffects.map((eff: any) => (
             <span key={eff.id} className="text-xs text-red-400 bg-red-950/40 px-2 py-0.5 rounded border border-red-900/50 animate-in fade-in duration-300 zoom-in-95">
@@ -293,6 +296,7 @@ export function GMView() {
                   <GMCharacterRow 
                     key={char.id} 
                     char={char} 
+                    combatStateData={combatState.characterStates?.[char.id]}
                     gmUpdateCharacter={gmUpdateCharacter} 
                     applyEffect={applyEffect} 
                     isActiveTurn={char.id === activeCharId} 

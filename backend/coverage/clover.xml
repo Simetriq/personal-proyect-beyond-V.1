@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1779976787971" clover="3.2.0">
+  <project timestamp="1779976787971" name="All files">
+    <metrics statements="24" coveredstatements="24" conditionals="10" coveredconditionals="10" methods="3" coveredmethods="3" elements="37" coveredelements="37" complexity="0" loc="24" ncloc="24" packages="1" files="1" classes="1"/>
+    <file name="dice.ts" path="C:\Users\HP\Desktop\personal-proyect-beyond-V.1\backend\src\engine\dice.ts">
+      <metrics statements="24" coveredstatements="24" conditionals="10" coveredconditionals="10" methods="3" coveredmethods="3"/>
+      <line num="14" count="2" type="stmt"/>
+      <line num="23" count="1" type="stmt"/>
+      <line num="24" count="9" type="stmt"/>
+      <line num="27" count="9" type="stmt"/>
+      <line num="28" count="18" type="cond" truecount="4" falsecount="0"/>
+      <line num="29" count="17" type="stmt"/>
+      <line num="31" count="1" type="stmt"/>
+      <line num="34" count="9" type="stmt"/>
+      <line num="35" count="9" type="stmt"/>
+      <line num="38" count="9" type="cond" truecount="2" falsecount="0"/>
+      <line num="40" count="9" type="cond" truecount="2" falsecount="0"/>
+      <line num="41" count="2" type="stmt"/>
+      <line num="42" count="2" type="stmt"/>
+      <line num="44" count="2" type="stmt"/>
+      <line num="54" count="7" type="stmt"/>
+      <line num="55" count="7" type="stmt"/>
+      <line num="56" count="7" type="stmt"/>
+      <line num="58" count="7" type="cond" truecount="2" falsecount="0"/>
+      <line num="59" count="7" type="stmt"/>
+      <line num="60" count="7" type="stmt"/>
+      <line num="61" count="7" type="stmt"/>
+      <line num="62" count="7" type="stmt"/>
+      <line num="63" count="7" type="stmt"/>
+      <line num="66" count="7" type="stmt"/>
+    </file>
+  </project>
+</coverage>

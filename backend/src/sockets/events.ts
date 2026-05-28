@@ -8,14 +8,7 @@ import { resolveAttack } from '../engine/combatResolution';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
-interface CombatState {
-  round: number;
-  turnIndex: number;
-  initiativeQueue: { characterId: string; initiative: number }[];
-  isRequestingInitiative: boolean;
-}
-
-const combatManagers = new Map<string, CombatState>();
+import { getCombatTracker, CombatantInitiativeInfo } from '../engine/combatTracker';
 const npcManagers = new Map<string, Map<string, any>>();
 function getCampaignNpcs(campaignId: string) {
   if (!npcManagers.has(campaignId)) npcManagers.set(campaignId, new Map());
@@ -34,18 +27,7 @@ async function saveCharacter(character: any) {
 }
 
 
-function getCombatState(campaignId: string): CombatState {
-  if (!combatManagers.has(campaignId)) {
-    combatManagers.set(campaignId, {
-      round: 1,
-      turnIndex: -1,
-      initiativeQueue: [],
-      isRequestingInitiative: false
-    });
-  }
-  return combatManagers.get(campaignId)!;
-}
-
+// CombatTracker maneja el estado internamente
 export function setupSocketEvents(io: Server) {
   io.on('connection', (socket: Socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
@@ -101,7 +83,7 @@ export function setupSocketEvents(io: Server) {
             });
         }
         
-        socket.emit('combat_state_updated', getCombatState(campaignId));
+        socket.emit('combat_state_updated', getCombatTracker(campaignId).getPublicState());
       } catch (e) {
         console.error('[Socket] Error on join_campaign sync:', e);
       }
@@ -169,7 +151,7 @@ export function setupSocketEvents(io: Server) {
     };
 
     const broadcastCombatState = (campaignId: string) => {
-      io.to(campaignId).emit('combat_state_updated', getCombatState(campaignId));
+      io.to(campaignId).emit('combat_state_updated', getCombatTracker(campaignId).getPublicState());
     };
 
     socket.on('equip_item', async (data: { campaignId: string, characterId: string, itemId: string }) => {
@@ -263,9 +245,13 @@ export function setupSocketEvents(io: Server) {
 
         const ta = defender.resistances.getResistanceByType(damageType);
         const result = resolveAttack(attackRoll, defenseRoll, baseDamage, ta);
+        const tracker = getCombatTracker(campaignId);
 
         if (result.damage > 0) {
           defender.applyResolvedDamage(result.damage);
+          if (tracker.characterStates.has(defenderId)) {
+            tracker.characterStates.get(defenderId)!.isDefensive = true;
+          }
           await saveCharacter(defender);
           broadcastCharacterUpdate(campaignId, defender);
         }
@@ -275,8 +261,30 @@ export function setupSocketEvents(io: Server) {
           defenderId,
           result
         });
+
+        // FASE 4: Oportunidad de Contraataque
+        if (result.counterAttackBonus > 0) {
+          tracker.addPendingCounter(defenderId, () => {
+            io.to(campaignId).emit('combat:counter_expired', { defenderId });
+          });
+          io.to(campaignId).emit('combat:counter_opportunity', {
+            defenderId,
+            attackerId,
+            bonus: result.counterAttackBonus,
+            timeoutMs: 15000
+          });
+        }
       } catch (e) {
         console.error('[Socket] Error resolving attack:', e);
+      }
+    });
+
+    socket.on('combat:execute_counter', (data: { campaignId: string, defenderId: string, attackerId: string, bonus: number }) => {
+      const tracker = getCombatTracker(data.campaignId);
+      if (tracker.resolvePendingCounter(data.defenderId)) {
+        io.to(data.campaignId).emit('combat:counter_confirmed', data);
+      } else {
+        socket.emit('combat:error', { message: 'El tiempo para contraatacar ha expirado.' });
       }
     });
 
@@ -307,72 +315,74 @@ export function setupSocketEvents(io: Server) {
         const npcs = Array.from(getCampaignNpcs(data.campaignId).values());
         const allCharactersToTick = [...dbCharacters.map(d => d.id), ...npcs.map(n => n.id)];
         
+        const tracker = getCombatTracker(data.campaignId);
+
         for (const charId of allCharactersToTick) {
           const character = await loadCharacter(data.campaignId, charId);
           if (character) {
+            // Reduce duraciones de efectos (ya lo hacía tickEffects)
             character.tickEffects();
+            
+            // FASE 5: Recarga de Ki según acción
+            const state = tracker.characterStates.get(charId);
+            const hasActedOrDefended = state ? (state.hasActed || state.isDefensive) : false;
+            
+            const baseKiAcc = character.getKiAccumulationBase ? character.getKiAccumulationBase() : 1;
+            const kiToRec = hasActedOrDefended ? Math.ceil(baseKiAcc / 2) : baseKiAcc;
+            
+            character.ki = (character.ki || 0) + kiToRec;
+
             character.currentInitiative = null; // Limpiamos iniciativa vieja
             await saveCharacter(character);
             broadcastCharacterUpdate(data.campaignId, character);
           }
         }
         
-        // Actualizamos estado de combate
-        const state = getCombatState(data.campaignId);
-        state.round += 1;
-        state.turnIndex = -1;
-        state.initiativeQueue = [];
-        state.isRequestingInitiative = false;
+        // FASE 5: Limpieza de Tracker
+        tracker.finalizeRound();
         broadcastCombatState(data.campaignId);
+        
+        io.to(data.campaignId).emit('combat:new_round_ready');
 
         console.log(`[Socket] Next round tick applied for campaign: ${data.campaignId}`);
       } catch (e) { console.error(e); }
     });
 
     socket.on('request_initiatives', (data: { campaignId: string }) => {
-      const state = getCombatState(data.campaignId);
-      state.isRequestingInitiative = true;
-      state.initiativeQueue = [];
-      state.turnIndex = -1;
+      const tracker = getCombatTracker(data.campaignId);
+      tracker.startRound();
       broadcastCombatState(data.campaignId);
-      io.to(data.campaignId).emit('initiative_requested');
+      io.to(data.campaignId).emit('combat:round_started'); // Socket spec
     });
 
-    socket.on('submit_initiative', async (data: { campaignId: string, characterId: string, initiative: number }) => {
-      const state = getCombatState(data.campaignId);
+    socket.on('combat:roll_initiative', async (data: { campaignId: string, info: CombatantInitiativeInfo, rollResult: number }) => {
+      const tracker = getCombatTracker(data.campaignId);
       
-      // Save initiative in queue
-      const existing = state.initiativeQueue.find(i => i.characterId === data.characterId);
-      if (existing) existing.initiative = data.initiative;
-      else state.initiativeQueue.push({ characterId: data.characterId, initiative: data.initiative });
+      tracker.submitInitiative(data.info, data.rollResult);
       
-      // Update character
+      // Update character DB
       try {
-        const character = await loadCharacter(data.campaignId, data.characterId);
+        const character = await loadCharacter(data.campaignId, data.info.characterId);
         if (character) {
-          character.currentInitiative = data.initiative;
+          // Buscamos cuál fue el resultado final que asignó el tracker
+          const finalEntry = tracker.initiativeQueue.find(q => q.characterId === data.info.characterId);
+          character.currentInitiative = finalEntry ? finalEntry.initiative : data.rollResult;
           await saveCharacter(character);
           broadcastCharacterUpdate(data.campaignId, character);
         }
       } catch (e) { console.error(e); }
 
-      // Sort queue desc
-      state.initiativeQueue.sort((a, b) => b.initiative - a.initiative);
-      
-      // Auto close request if enough players? No, GM controls it or we just broadcast state.
       broadcastCombatState(data.campaignId);
     });
 
     socket.on('next_turn', (data: { campaignId: string }) => {
-      const state = getCombatState(data.campaignId);
-      state.isRequestingInitiative = false;
-      if (state.initiativeQueue.length > 0) {
-        state.turnIndex++;
-        if (state.turnIndex >= state.initiativeQueue.length) {
-          state.turnIndex = -1; // Fin de la ronda
-        }
-      }
+      const tracker = getCombatTracker(data.campaignId);
+      const activeChar = tracker.nextTurn();
       broadcastCombatState(data.campaignId);
+      
+      if (activeChar) {
+        io.to(data.campaignId).emit('combat:turn_changed', activeChar);
+      }
     });
 
     socket.on('use_character_ability', async (data: { campaignId: string, sourceId: string, targetId: string, abilityKey: string }) => {
@@ -502,8 +512,8 @@ export function setupSocketEvents(io: Server) {
         getCampaignNpcs(data.campaignId).delete(data.characterId);
         
         // Remove from initiative queue
-        const state = getCombatState(data.campaignId);
-        state.initiativeQueue = state.initiativeQueue.filter(q => q.characterId !== data.characterId);
+        const tracker = getCombatTracker(data.campaignId);
+        tracker.initiativeQueue = tracker.initiativeQueue.filter(q => q.characterId !== data.characterId);
         broadcastCombatState(data.campaignId);
         
         io.to(data.campaignId).emit('character_removed', data.characterId);

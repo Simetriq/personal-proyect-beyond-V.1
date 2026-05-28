@@ -12,17 +12,34 @@ import { KiAccumulator } from "./ui/KiAccumulator";
 import { DiceRoller } from "./ui/DiceRoller";
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
   const [targetId, setTargetId] = useState<string>("");
   const [fatigue, setFatigue] = useState(0);
+  const [counterTimeLeft, setCounterTimeLeft] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use a hardcoded campaign and character for demonstration
   const CAMPAIGN_ID = "camp-1";
   const CHARACTER_ID = myCharacterId;
+
+  useEffect(() => {
+    if (pendingCounterOpportunity) {
+      setCounterTimeLeft(pendingCounterOpportunity.timeoutMs);
+      const interval = setInterval(() => {
+        setCounterTimeLeft(prev => {
+          if (prev <= 100) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 100;
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [pendingCounterOpportunity]);
 
   useEffect(() => {
     connectToCampaign(CAMPAIGN_ID);
@@ -117,6 +134,60 @@ export function PlayerView() {
         </div>
       )}
       
+      {/* Modal de Contraataque */}
+      {pendingCounterOpportunity && (
+        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm rounded-xl">
+          <Card className="bg-red-950 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)] w-[400px]">
+            <CardHeader>
+              <CardTitle className="text-2xl text-red-500 text-center uppercase tracking-wide animate-pulse">
+                ¡Oportunidad de Contraataque!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 text-center">
+              <p className="text-gray-200">Has bloqueado/esquivado el ataque con éxito.</p>
+              <p className="text-4xl font-black text-yellow-500 drop-shadow-md">
+                BONO: +{pendingCounterOpportunity.bonus}
+              </p>
+              <div className="w-full bg-gray-900 h-4 rounded-full border border-gray-700 overflow-hidden">
+                <div 
+                  className="bg-red-500 h-full transition-all duration-100 ease-linear" 
+                  style={{ width: `${(counterTimeLeft / pendingCounterOpportunity.timeoutMs) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-400">
+                Tiempo restante: {(counterTimeLeft / 1000).toFixed(1)}s
+              </p>
+              <Button 
+                onClick={() => executeCounter(CHARACTER_ID, pendingCounterOpportunity.attackerId, pendingCounterOpportunity.bonus)}
+                className="bg-red-600 hover:bg-red-500 text-white font-bold py-6 text-xl transition-transform active:scale-95"
+              >
+                ¡EJECUTAR CONTRAATAQUE!
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {/* Cola de Iniciativa */}
+      {combatState.initiativeQueue.length > 0 && (
+        <div className="col-span-12 bg-gray-900/80 p-3 rounded-lg border border-gray-800 flex items-center gap-4 overflow-x-auto shadow-inner">
+          <span className="text-yellow-500 font-bold whitespace-nowrap">⏳ Orden de Asalto ({combatState.round}):</span>
+          <div className="flex gap-2">
+            {combatState.initiativeQueue.map((entry, index) => {
+              const c = characters[entry.characterId];
+              if (!c) return null;
+              const isCurrent = index === combatState.turnIndex;
+              return (
+                <div key={entry.characterId} className={`px-3 py-1 rounded text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition-colors ${isCurrent ? 'bg-yellow-600 text-white shadow-[0_0_15px_rgba(202,138,4,0.5)] border-yellow-400 border' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
+                  <span>{c.name}</span>
+                  <span className="bg-black/50 px-2 rounded text-xs text-yellow-200">{entry.initiative}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Overlay INCONSCIENTE */}
       {isUnconscious && (
         <div className="absolute inset-0 bg-red-700/20 z-50 pointer-events-none rounded-xl animate-pulse transition-all"></div>

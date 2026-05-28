@@ -32,11 +32,18 @@ export interface Character {
   maxKi?: number;
 }
 
+export interface CharacterCombatState {
+  isSurprised: boolean;
+  isDefensive: boolean;
+  hasActed: boolean;
+}
+
 export interface CombatState {
   round: number;
   turnIndex: number;
   initiativeQueue: { characterId: string; initiative: number }[];
   isRequestingInitiative: boolean;
+  characterStates: Record<string, CharacterCombatState>;
 }
 
 export interface CombatStore {
@@ -48,6 +55,7 @@ export interface CombatStore {
   myCharacterId: string | null;
   combatState: CombatState;
   diceRolls: DiceRoll[];
+  pendingCounterOpportunity: { attackerId: string; bonus: number; timeoutMs: number } | null;
   
   setMyCharacterId: (id: string) => void;
   connectToCampaign: (campaignId: string) => void;
@@ -65,6 +73,7 @@ export interface CombatStore {
   requestInitiatives: () => void;
   submitInitiative: (characterId: string, initiative: number) => void;
   nextTurn: () => void;
+  executeCounter: (defenderId: string, attackerId: string, bonus: number) => void;
   spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => void;
   removeNpc: (characterId: string) => void;
 
@@ -88,9 +97,11 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     round: 1,
     turnIndex: -1,
     initiativeQueue: [],
-    isRequestingInitiative: false
+    isRequestingInitiative: false,
+    characterStates: {}
   },
   diceRolls: [],
+  pendingCounterOpportunity: null,
 
   setMyCharacterId: (id: string) => {
     localStorage.setItem('anima_character_id', id);
@@ -164,6 +175,25 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     socket.on('attack_resolved', (data: any) => {
       // Opcional: mostrar una notificación o toast en el frontend con el resultado del combate.
       console.log('Resultado de combate:', data.result.message);
+    });
+
+    socket.on('combat:counter_opportunity', (data: { defenderId: string, attackerId: string, bonus: number, timeoutMs: number }) => {
+      if (get().myCharacterId === data.defenderId) {
+        set({ pendingCounterOpportunity: { attackerId: data.attackerId, bonus: data.bonus, timeoutMs: data.timeoutMs } });
+      }
+    });
+
+    socket.on('combat:counter_expired', (data: { defenderId: string }) => {
+      if (get().myCharacterId === data.defenderId) {
+        set({ pendingCounterOpportunity: null });
+      }
+    });
+
+    socket.on('combat:counter_confirmed', (data: { defenderId: string }) => {
+      if (get().myCharacterId === data.defenderId) {
+        set({ pendingCounterOpportunity: null });
+      }
+      console.log(`¡Contraataque de ${data.defenderId} confirmado!`);
     });
 
     set({ socket, campaignId });
@@ -281,6 +311,14 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('next_turn', { campaignId });
+    }
+  },
+
+  executeCounter: (defenderId: string, attackerId: string, bonus: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:execute_counter', { campaignId, defenderId, attackerId, bonus });
+      set({ pendingCounterOpportunity: null }); // Limpiar local preventivamente
     }
   },
 

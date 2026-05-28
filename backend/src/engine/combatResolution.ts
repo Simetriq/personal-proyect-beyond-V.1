@@ -12,21 +12,25 @@ export function resolveAttack(
 ): CombatResolutionResult {
   const diff = attackRoll - defenseRoll;
   
-  // Si la defensa supera al ataque o es igual, hay contraataque
-  if (diff <= 0) {
-    const counterAttackBonus = Math.floor(Math.abs(diff) / 2);
+  // Si la defensa supera al ataque o es igual, hay contraataque (Fase 4)
+  if (diff < 0) {
+    let rawBonus = Math.floor(Math.abs(diff) / 2);
+    // Redondeo a la baja en pasos de 5
+    let counterAttackBonus = Math.floor(rawBonus / 5) * 5;
+    if (counterAttackBonus > 150) counterAttackBonus = 150;
+    
     return {
       damage: 0,
       counterAttackBonus,
-      message: `Ataque bloqueado/esquivado. Contraataque: +${counterAttackBonus}`,
+      message: `Ataque bloqueado/esquivado. Oportunidad de Contraataque: +${counterAttackBonus}`,
     };
   }
 
-  // El ataque impactó
-  // Daño = (Diferencia - (TA * 10)) * baseDamage / 100
+  // El ataque impactó (Fase 3)
   const absorb = ta * 10;
   const netDiff = diff - absorb;
   
+  // Si la TA absorbe todo
   if (netDiff <= 0) {
     return {
       damage: 0,
@@ -35,14 +39,19 @@ export function resolveAttack(
     };
   }
 
-  let finalDamage = Math.floor((netDiff * baseDamage) / 100);
+  // El remanente se divide entre 10 y se redondea a la baja para %
+  let percentage = Math.floor(netDiff / 10) * 10;
   
-  // Daño mínimo 1 si superó la armadura
-  if (finalDamage < 1) finalDamage = 1;
+  // El daño mínimo aplicable si impacta es el 10%
+  if (percentage < 10) {
+    percentage = 10;
+  }
+
+  const finalDamage = Math.floor((baseDamage * percentage) / 100);
 
   return {
     damage: finalDamage,
     counterAttackBonus: 0,
-    message: `¡Impacto! (Dif: ${diff}). Daño final: ${finalDamage}`,
+    message: `¡Impacto! (Dif: ${diff}, Net: ${netDiff}). Se aplica ${percentage}% del Daño Base. Daño final: ${finalDamage}`,
   };
 }
