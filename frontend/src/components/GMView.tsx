@@ -66,13 +66,41 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
         {combatStateData?.isDefensive && <span className="text-blue-300 bg-[#081a2a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-blue-800 font-serif shadow-inner">A la Defensiva</span>}
         {combatStateData?.hasActed && <span className="text-[#8b7355] bg-[#161411] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-[#3a2b1c] font-serif shadow-inner">Actuó</span>}
         {combatStateData?.isSurprised && <span className="text-purple-300 bg-[#1a082a] px-2 py-0.5 ml-2 text-[10px] uppercase tracking-wider rounded border border-purple-800 font-serif shadow-inner">Sorprendido</span>}
-        <div className="flex flex-col gap-1 mt-1">
-          {char.activeEffects && char.activeEffects.map((eff: any) => (
-            <span key={eff.id} className="text-xs text-red-400 bg-red-950/40 px-2 py-0.5 rounded border border-red-900/50 animate-in fade-in duration-300 zoom-in-95">
-              {eff.name} ({eff.value} dmg, {eff.durationRounds} as.)
-            </span>
-          ))}
-        </div>
+        {char.activeEffects && char.activeEffects.length > 0 && (
+          <div className="mt-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-6 px-2 btn-piedra-runica bg-gradient-to-b from-[#2a0808] to-[#1a0505] border border-red-900 text-red-300 hover:from-red-900 hover:to-[#1a0505] text-[10px] uppercase tracking-widest shadow-md relative z-10">
+                  Efectos Activos ({char.activeEffects.length})
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px] bg-[#161411] border-[2px] border-[#3a2b1c] text-gray-200 shadow-[inset_0_0_20px_rgba(0,0,0,1),0_10px_30px_rgba(0,0,0,0.9)]" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-wood.png')" }}>
+                <DialogHeader className="border-b border-[#3a2b1c] pb-3">
+                  <DialogTitle className="font-serif text-[#c5a059] flex items-center gap-2 uppercase tracking-widest text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+                    <span className="text-2xl">📜</span> Efectos de {char.name}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                <div className="py-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent pr-2">
+                  {char.activeEffects.map((effect: any) => (
+                    <div key={effect.id} className="text-sm p-3 bg-gradient-to-r from-[#2a0808] to-[#1a0505] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-3 flex flex-col gap-2 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
+                      <div className="relative z-10 flex items-center justify-between">
+                        <span className="text-red-400 font-bold uppercase tracking-wider font-serif text-base drop-shadow-md">{effect.name}</span>
+                        <span className="text-[10px] font-bold text-red-200 bg-red-950 px-2 py-1 rounded border border-red-900/50 shadow-inner uppercase tracking-wider">
+                          {effect.durationRounds} turnos
+                        </span>
+                      </div>
+                      <div className="relative z-10 text-xs text-red-300/80 italic font-serif">
+                        Recibe {effect.value} puntos de daño vital al final del asalto.
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </TableCell>
       <TableCell>
         <div className="flex justify-between text-xs mb-1">
