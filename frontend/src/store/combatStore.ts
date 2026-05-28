@@ -30,6 +30,13 @@ export interface Character {
   activeEffects?: any[];
   maxZeon?: number;
   maxKi?: number;
+  currentFatigue?: number;
+  maxFatigue?: number;
+  isBleeding?: boolean;
+  bleedingDamage?: number;
+  isChanneling?: boolean;
+  channeledZeon?: number;
+  targetSpellId?: string;
 }
 
 export interface CharacterCombatState {
@@ -56,16 +63,24 @@ export interface CombatStore {
   combatState: CombatState;
   diceRolls: DiceRoll[];
   pendingCounterOpportunity: { attackerId: string; bonus: number; timeoutMs: number } | null;
+  criticalHitEvent: { defenderId: string; level: number; location: number; instantKill: boolean } | null;
+  weaponShatteredEvent: { characterId: string; weaponName: string } | null;
   
   setMyCharacterId: (id: string) => void;
+  clearCriticalHit: () => void;
+  clearWeaponShattered: () => void;
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType) => void;
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE') => void;
+  spendFatigue: (characterId: string, amount: number) => void;
+  startChanneling: (characterId: string, spellId: string) => void;
+  stopChanneling: (characterId: string) => void;
+  reportPsychicFailure: (characterId: string, failureLevel: number) => void;
+  buyItem: (characterId: string, item: any, cost: number) => void;
   createCharacter: (campaignId: string, characterId: string, data: any) => void;
   equipItem: (characterId: string, itemId: string) => void;
   unequipItem: (characterId: string, itemId: string) => void;
   useItem: (characterId: string, itemId: string) => void;
-  buyItem: (characterId: string, item: any, cost: number) => void;
   gmUpdateCharacter: (characterId: string, updates: any) => void;
   applyEffect: (characterId: string, effect: any) => void;
   nextRoundTick: () => void;
@@ -102,11 +117,16 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   },
   diceRolls: [],
   pendingCounterOpportunity: null,
+  criticalHitEvent: null,
+  weaponShatteredEvent: null,
 
   setMyCharacterId: (id: string) => {
     localStorage.setItem('anima_character_id', id);
     set({ myCharacterId: id });
   },
+  
+  clearCriticalHit: () => set({ criticalHitEvent: null }),
+  clearWeaponShattered: () => set({ weaponShatteredEvent: null }),
 
   connectToCampaign: (campaignId: string) => {
     if (get().socket) return;
@@ -154,7 +174,14 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             temporaryShield: data.temporaryShield !== undefined ? data.temporaryShield : state.characters[data.characterId]?.temporaryShield,
             currentInitiative: data.currentInitiative !== undefined ? data.currentInitiative : state.characters[data.characterId]?.currentInitiative,
             kiAbilities: data.kiAbilities || state.characters[data.characterId]?.kiAbilities || [],
-            state: data.state as Character['state']
+            state: data.state as Character['state'],
+            currentFatigue: data.currentFatigue !== undefined ? data.currentFatigue : state.characters[data.characterId]?.currentFatigue,
+            maxFatigue: data.maxFatigue !== undefined ? data.maxFatigue : state.characters[data.characterId]?.maxFatigue,
+            isBleeding: data.isBleeding !== undefined ? data.isBleeding : state.characters[data.characterId]?.isBleeding,
+            bleedingDamage: data.bleedingDamage !== undefined ? data.bleedingDamage : state.characters[data.characterId]?.bleedingDamage,
+            isChanneling: data.isChanneling !== undefined ? data.isChanneling : state.characters[data.characterId]?.isChanneling,
+            channeledZeon: data.channeledZeon !== undefined ? data.channeledZeon : state.characters[data.characterId]?.channeledZeon,
+            targetSpellId: data.targetSpellId !== undefined ? data.targetSpellId : state.characters[data.characterId]?.targetSpellId
           }
         }
       }));
@@ -172,11 +199,6 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       });
     });
 
-    socket.on('attack_resolved', (data: any) => {
-      // Opcional: mostrar una notificación o toast en el frontend con el resultado del combate.
-      console.log('Resultado de combate:', data.result.message);
-    });
-
     socket.on('combat:counter_opportunity', (data: { defenderId: string, attackerId: string, bonus: number, timeoutMs: number }) => {
       if (get().myCharacterId === data.defenderId) {
         set({ pendingCounterOpportunity: { attackerId: data.attackerId, bonus: data.bonus, timeoutMs: data.timeoutMs } });
@@ -187,6 +209,23 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       if (get().myCharacterId === data.defenderId) {
         set({ pendingCounterOpportunity: null });
       }
+    });
+
+    socket.on('combat:weapon_shattered', (data: { characterId: string, weaponName: string }) => {
+      set({ weaponShatteredEvent: data });
+    });
+
+    socket.on('combat:critical_hit', (data: { defenderId: string, level: number, location: number, instantKill: boolean }) => {
+      set({ criticalHitEvent: data });
+    });
+
+    socket.on('combat:bleeding_applied', (data: { defenderId: string }) => {
+      // Opcional: mostrar notificación o simplemente dejar que la actualización del personaje maneje la UI
+      console.log(`El personaje ${data.defenderId} está sangrando.`);
+    });
+
+    socket.on('combat:fatigue_spent', (data: { characterId: string, amount: number, bonus: number }) => {
+      console.log(`El personaje ${data.characterId} gastó ${data.amount} cansancio. (Bono: +${data.bonus})`);
     });
 
     socket.on('combat:counter_confirmed', (data: { defenderId: string }) => {
@@ -211,18 +250,38 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType) => {
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE') => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
-      socket.emit('resolve_attack', {
-        campaignId,
-        attackerId,
-        defenderId,
-        attackRoll,
-        defenseRoll,
-        baseDamage,
-        damageType
-      });
+      socket.emit('resolve_attack', { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType });
+    }
+  },
+
+  spendFatigue: (characterId: string, amount: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:spend_fatigue', { campaignId, characterId, amount });
+    }
+  },
+
+  startChanneling: (characterId: string, spellId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:start_channeling', { campaignId, characterId, targetSpellId: spellId });
+    }
+  },
+
+  stopChanneling: (characterId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:stop_channeling', { campaignId, characterId });
+    }
+  },
+
+  reportPsychicFailure: (characterId: string, failureLevel: number) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:psychic_failure', { campaignId, characterId, failureLevel });
     }
   },
 

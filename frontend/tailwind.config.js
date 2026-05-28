@@ -30,6 +30,11 @@ export default {
         'glow-ki': '0 0 15px rgba(0, 229, 255, 0.3)',
         'glass': 'inset 0 0 20px rgba(255, 255, 255, 0.05)',
         'glass-gold': 'inset 0 0 20px rgba(197, 160, 89, 0.1), 0 0 10px rgba(197, 160, 89, 0.2)',
+        'inner-gold': 'inset 0 2px 10px rgba(197, 160, 89, 0.2), inset 0 -2px 15px rgba(0, 0, 0, 0.8)',
+        'inner-blood': 'inset 0 2px 10px rgba(138, 3, 3, 0.4), inset 0 -2px 15px rgba(0, 0, 0, 0.8)',
+        'inner-zeon': 'inset 0 2px 10px rgba(75, 0, 130, 0.4), inset 0 -2px 15px rgba(0, 0, 0, 0.8)',
+        'inner-ki': 'inset 0 2px 10px rgba(0, 229, 255, 0.4), inset 0 -2px 15px rgba(0, 0, 0, 0.8)',
+        'runic': '0 0 5px rgba(197, 160, 89, 0.5), inset 0 0 5px rgba(197, 160, 89, 0.5)',
       },
       colors: {
         anima: {

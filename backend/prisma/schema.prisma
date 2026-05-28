@@ -41,6 +41,20 @@ model Character {
   kiAbilities     Json           @default("[]")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  
+  // Fase 6: Críticos y Sangrado
+  isBleeding      Boolean        @default(false)
+  bleedingDamage  Int            @default(0)
+  
+  // Fase 6: Cansancio
+  maxFatigue      Int            @default(5)
+  currentFatigue  Int            @default(5)
+  
+  // Fase 6: Acumulación Mágica
+  isChanneling    Boolean        @default(false)
+  channeledZeon   Int            @default(0)
+  targetSpellId   String?
+
   activeEffects   ActiveEffect[]
   inventoryItems  InventoryItem[]
   campaign        Campaign       @relation(fields: [campaignId], references: [id])
@@ -78,6 +92,12 @@ model Item {
   modifiers   Json?    // e.g. { "FIL": 10, "CON": 5 }
   weight      Float?
   price       Float?
+  
+  // Fase 6: Choque de Armas
+  isWeapon    Boolean  @default(false)
+  breakage    Int      @default(0) // ROT
+  fortitude   Int      @default(0) // ENT
+
   inventoryItems InventoryItem[]
 }
 
@@ -87,6 +107,7 @@ model InventoryItem {
   itemId      String
   quantity    Int      @default(1)
   equipped    Boolean  @default(false)
+  isBroken    Boolean  @default(false) // Fase 6: Rotura de armas
   
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   item        Item      @relation(fields: [itemId], references: [id])

@@ -38,3 +38,30 @@
     @apply font-serif tracking-wide;
   }
 }
+
+@layer components {
+  .panel-arcano {
+    @apply bg-gradient-to-b from-slate-900 via-[#12141c] to-black border border-amber-600/30 shadow-inner-gold rounded-md relative overflow-hidden;
+  }
+  .panel-arcano::before {
+    content: '';
+    @apply absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/old-wall.png')] opacity-20 pointer-events-none;
+  }
+  
+  .cristal-tubo {
+    @apply relative w-full rounded-full border border-gray-600/50 shadow-[inset_0_4px_6px_rgba(0,0,0,0.6),inset_0_-2px_4px_rgba(255,255,255,0.1)] bg-black overflow-hidden;
+  }
+  
+  .cristal-tubo::after {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none;
+  }
+
+  .tubo-cap {
+    @apply absolute top-0 bottom-0 w-3 bg-gradient-to-r from-gray-700 via-gray-400 to-gray-800 border-x border-gray-900 z-10;
+  }
+
+  .btn-piedra-runica {
+    @apply bg-gradient-to-b from-gray-800 to-gray-950 border-t border-gray-600 border-b-2 border-b-black shadow-lg hover:shadow-glow-gold hover:border-anima-gold transition-all duration-300 font-serif font-bold tracking-widest text-gray-300 hover:text-anima-goldglow;
+  }
+}

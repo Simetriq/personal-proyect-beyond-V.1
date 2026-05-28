@@ -27,18 +27,20 @@ function App() {
           <p className="text-xl text-gray-400 font-light mt-8">Selecciona tu rol para comenzar</p>
         </div>
         <div className="flex gap-8 relative z-10">
-          <Button 
+          <button 
             onClick={() => setRole('PLAYER')} 
-            className="w-48 h-32 text-2xl font-serif font-bold bg-gradient-to-b from-anima-panel to-background border border-anima-gold/30 hover:border-anima-gold hover:shadow-glow-gold hover:bg-anima-gold/10 transition-all text-white"
+            className="w-48 h-48 rounded-full flex items-center justify-center text-3xl font-serif font-extrabold bg-gradient-to-br from-slate-800 via-gray-900 to-black border-4 border-[#3a352a] hover:border-anima-gold hover:shadow-[0_0_30px_rgba(197,160,89,0.5)] hover:scale-105 transition-all text-gray-300 hover:text-anima-goldglow shadow-[inset_0_10px_20px_rgba(0,0,0,0.8),0_10px_20px_rgba(0,0,0,0.5)] relative overflow-hidden group"
           >
-             Jugador
-          </Button>
-          <Button 
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <span className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider">Jugador</span>
+          </button>
+          <button 
             onClick={() => setRole('GM')} 
-            className="w-48 h-32 text-2xl font-serif font-bold bg-gradient-to-b from-anima-panel to-background border border-anima-zeon/50 hover:border-anima-zeon hover:shadow-glow-zeon hover:bg-anima-zeon/10 transition-all text-white"
+            className="w-48 h-48 rounded-full flex items-center justify-center text-3xl font-serif font-extrabold bg-gradient-to-br from-slate-800 via-[#161224] to-black border-4 border-[#2a253a] hover:border-anima-zeon hover:shadow-[0_0_30px_rgba(75,0,130,0.6)] hover:scale-105 transition-all text-gray-300 hover:text-[#d0b3ff] shadow-[inset_0_10px_20px_rgba(0,0,0,0.8),0_10px_20px_rgba(0,0,0,0.5)] relative overflow-hidden group"
           >
-             Game Master
-          </Button>
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <span className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider text-center leading-tight">Game<br/>Master</span>
+          </button>
         </div>
       </div>
     )

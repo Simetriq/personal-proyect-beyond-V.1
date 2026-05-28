@@ -56,7 +56,13 @@ export class CharacterRepository {
         initiative_base: 0,
         gold: data.gold,
         resistances: data.resistances,
-        dotes: []
+        dotes: [],
+        isBleeding: false,
+        bleedingDamage: 0,
+        currentFatigue: 5,
+        maxFatigue: 5,
+        isChanneling: false,
+        channeledZeon: 0
       },
       include: {
         inventoryItems: { include: { item: true } }
@@ -86,7 +92,14 @@ export class CharacterRepository {
             FRI: character.baseResistances.FRI,
             ENE: character.baseResistances.ENE
           },
-          dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : []
+          dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : [],
+          isBleeding: character.isBleeding,
+          bleedingDamage: character.bleedingDamage,
+          currentFatigue: character.currentFatigue,
+          maxFatigue: character.maxFatigue,
+          isChanneling: character.isChanneling,
+          channeledZeon: character.channeledZeon,
+          targetSpellId: character.targetSpellId
         }
       });
 

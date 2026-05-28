@@ -236,15 +236,59 @@ export function setupSocketEvents(io: Server) {
       }
     });
 
-    socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string }) => {
-      const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType } = data;
+    socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE' }) => {
+      const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType = 'DODGE' } = data;
       try {
         const attacker = await loadCharacter(campaignId, attackerId);
         const defender = await loadCharacter(campaignId, defenderId);
         if (!attacker || !defender) return;
 
+        // FASE 6.2: Aplicar penalizadores físicos (Agotamiento / Sangrado)
+        const attackerPenalty = attacker.getPhysicalPenalty();
+        const defenderPenalty = defender.getPhysicalPenalty();
+        
+        let finalAttackRoll = attackRoll + attackerPenalty;
+        let finalDefenseRoll = defenseRoll + defenderPenalty;
+
+        // FASE 6.4: Penalizador Defensivo por Canalización Mágica
+        if (defender.isChanneling) {
+          finalDefenseRoll -= 20; // Penalizador fijo por canalizar
+        }
+
+        // FASE 6.5: Acrobacias (Si iniciativa > 50 de diferencia)
+        let acrobaticsBonus = 0;
+        if (attacker.currentInitiative !== null && defender.currentInitiative !== null) {
+          if (attacker.currentInitiative - defender.currentInitiative > 50 && (attacker.secondarySkills?.acrobacias || 0) >= 50) {
+            acrobaticsBonus = 10;
+            finalAttackRoll += acrobaticsBonus;
+          }
+        }
+
         const ta = defender.resistances.getResistanceByType(damageType);
-        const result = resolveAttack(attackRoll, defenseRoll, baseDamage, ta);
+        
+        // FASE 6.3: Choque de Armas
+        const attackerWeapon = attacker.getEquippedWeapon();
+        const defenderWeapon = defender.getEquippedWeapon();
+        const attackerROT = attackerWeapon ? (attackerWeapon.breakage || 0) : 0;
+        const defenderENT = defenderWeapon ? (defenderWeapon.fortitude || 0) : 0;
+
+        const result = resolveAttack(finalAttackRoll, finalDefenseRoll, baseDamage, ta, defender.hp, defenseType, attackerROT, defenderENT);
+        
+        if (result.weaponClash && result.weaponClash.broken && defenderWeapon) {
+          defenderWeapon.isBroken = true;
+          // Se rompe el arma, la desequipamos y marcamos rota
+          defender.unequipItem(defenderWeapon.id);
+          io.to(campaignId).emit('combat:weapon_shattered', {
+            characterId: defenderId,
+            weaponName: defenderWeapon.name
+          });
+        }
+        
+        // Agregar información de habilidades secundarias y penalizadores
+        if (acrobaticsBonus > 0) result.message += ` [Acrobacias: +${acrobaticsBonus} Ataque]`;
+        if (attackerPenalty < 0) result.message += ` [Atacante Penalizado: ${attackerPenalty}]`;
+        if (defenderPenalty < 0) result.message += ` [Defensor Penalizado: ${defenderPenalty}]`;
+        
         const tracker = getCombatTracker(campaignId);
 
         if (result.damage > 0) {
@@ -252,6 +296,45 @@ export function setupSocketEvents(io: Server) {
           if (tracker.characterStates.has(defenderId)) {
             tracker.characterStates.get(defenderId)!.isDefensive = true;
           }
+
+          // FASE 6.1 y 6.5: Crítico y Resistir Dolor
+          if (result.isCritical) {
+            let instantKill = false;
+            // 10-19 Cabeza, 20-29 Pecho/Corazón. Amputación si nivel >= 50
+            if (result.criticalLocation! >= 10 && result.criticalLocation! <= 29 && result.criticalLevel! >= 50) {
+              instantKill = true;
+              defender.currentHp = 0; // Muerte instantánea
+              result.message += " ¡GOLPE FATAL (Amputación)!";
+            }
+
+            let ignoreCritical = false;
+            if ((defender.secondarySkills?.resistir_dolor || 0) >= 50) {
+              ignoreCritical = true;
+              result.message += ` [Resistir el Dolor: El defensor ignora el penalizador de crítico]`;
+            } else {
+              // Aplica un efecto de penalizador por crítico
+              defender.activeEffects.push({
+                id: `crit_${Date.now()}`,
+                name: `Herida Crítica (Nvl ${result.criticalLevel})`,
+                type: 'PENALIZADOR',
+                value: result.criticalLevel || 10,
+                durationRounds: 5
+              });
+            }
+            
+            if (!instantKill && defender.currentHp > 0) {
+              defender.isBleeding = true;
+              io.to(campaignId).emit('combat:bleeding_applied', { defenderId });
+            }
+            
+            io.to(campaignId).emit('combat:critical_hit', {
+              defenderId,
+              level: result.criticalLevel,
+              location: result.criticalLocation,
+              instantKill
+            });
+          }
+
           await saveCharacter(defender);
           broadcastCharacterUpdate(campaignId, defender);
         }
@@ -285,6 +368,71 @@ export function setupSocketEvents(io: Server) {
         io.to(data.campaignId).emit('combat:counter_confirmed', data);
       } else {
         socket.emit('combat:error', { message: 'El tiempo para contraatacar ha expirado.' });
+      }
+    });
+
+    // FASE 6.2: Gasto de Cansancio
+    socket.on('combat:spend_fatigue', async (data: { campaignId: string, characterId: string, amount: number }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character && character.currentFatigue >= data.amount) {
+          character.currentFatigue -= data.amount;
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+          
+          io.to(data.campaignId).emit('combat:fatigue_spent', {
+            characterId: data.characterId,
+            amount: data.amount,
+            bonus: data.amount * 15
+          });
+        }
+      } catch (e) {
+        console.error('[Socket] Error spending fatigue:', e);
+      }
+    });
+
+    // FASE 6.4: Canalización Mágica
+    socket.on('combat:start_channeling', async (data: { campaignId: string, characterId: string, targetSpellId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          character.isChanneling = true;
+          character.channeledZeon = 0;
+          character.targetSpellId = data.targetSpellId;
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) {
+        console.error('[Socket] Error starting channeling:', e);
+      }
+    });
+
+    socket.on('combat:stop_channeling', async (data: { campaignId: string, characterId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          character.isChanneling = false;
+          character.channeledZeon = 0;
+          character.targetSpellId = null;
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) {
+        console.error('[Socket] Error stopping channeling:', e);
+      }
+    });
+
+    // FASE 6.4: Falla de Proyección Psíquica
+    socket.on('combat:psychic_failure', async (data: { campaignId: string, characterId: string, failureLevel: number }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          character.applyPsychicFailure(data.failureLevel);
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) {
+        console.error('[Socket] Error in psychic failure:', e);
       }
     });
 

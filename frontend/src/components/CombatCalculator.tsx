@@ -13,12 +13,13 @@ export function CombatCalculator() {
   const [defenseRoll, setDefenseRoll] = useState<number>(0);
   const [baseDamage, setBaseDamage] = useState<number>(50);
   const [damageType, setDamageType] = useState<DamageType>("FIL");
+  const [defenseType, setDefenseType] = useState<'BLOCK' | 'DODGE'>('DODGE');
 
   const charList = Object.values(characters);
 
   const handleResolve = () => {
     if (!attackerId || !defenderId) return;
-    resolveAttack(attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType);
+    resolveAttack(attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType);
   };
 
   return (
@@ -64,7 +65,17 @@ export function CombatCalculator() {
               <Input type="number" value={attackRoll} onChange={(e) => setAttackRoll(parseInt(e.target.value) || 0)} className="bg-gray-900 border-gray-700 text-white mt-1" />
             </div>
             <div>
-              <label className="text-sm text-gray-400">Tirada de Defensa</label>
+              <label className="text-sm text-gray-400 flex justify-between">
+                Tirada de Defensa
+                <select 
+                  className="bg-transparent border-none text-xs text-anima-gold font-bold focus:outline-none"
+                  value={defenseType}
+                  onChange={(e) => setDefenseType(e.target.value as 'BLOCK' | 'DODGE')}
+                >
+                  <option value="DODGE" className="bg-gray-900">ESQUIVA</option>
+                  <option value="BLOCK" className="bg-gray-900">PARADA</option>
+                </select>
+              </label>
               <Input type="number" value={defenseRoll} onChange={(e) => setDefenseRoll(parseInt(e.target.value) || 0)} className="bg-gray-900 border-gray-700 text-white mt-1" />
             </div>
           </div>

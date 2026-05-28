@@ -26,9 +26,13 @@ export interface Item {
   id: string;
   name: string;
   quantity: number;
-  type: 'CONSUMIBLE' | 'ARMADURA' | 'OTROS';
+  type: 'CONSUMIBLE' | 'ARMADURA' | 'ARMA' | 'OTROS';
   equipped: boolean;
   modifiers?: ItemModifier;
+  isWeapon?: boolean;
+  breakage?: number;
+  fortitude?: number;
+  isBroken?: boolean;
 }
 
 export class Character {
@@ -47,6 +51,21 @@ export class Character {
   public activeEffects: ActiveEffect[];
   public kiAbilities: string[];
   public state: CharacterState;
+  
+  // Fase 6
+  public isBleeding: boolean;
+  public bleedingDamage: number;
+  public maxFatigue: number;
+  public currentFatigue: number;
+  public isChanneling: boolean;
+  public channeledZeon: number;
+  public targetSpellId: string | null;
+  public zeonRegen: number = 20;
+  public secondarySkills: Record<string, number> = {
+    acrobacias: 60,
+    frialdad: 60,
+    resistir_dolor: 60
+  };
 
   constructor(data: any) {
     this.id = data.id;
@@ -75,6 +94,15 @@ export class Character {
     // Inicializamos kiAbilities
     this.kiAbilities = data.kiAbilities || [];
     
+    // Fase 6
+    this.isBleeding = data.isBleeding || false;
+    this.bleedingDamage = data.bleedingDamage || 0;
+    this.maxFatigue = data.maxFatigue || 5;
+    this.currentFatigue = data.currentFatigue ?? 5; // allow 0
+    this.isChanneling = data.isChanneling || false;
+    this.channeledZeon = data.channeledZeon || 0;
+    this.targetSpellId = data.targetSpellId || null;
+
     // Calculamos las resistencias totales (base + equipamiento)
     this.resistances = new Resistances();
     this.recalculateResistances();
@@ -101,6 +129,12 @@ export class Character {
         remainingEffects.push(effect);
       }
     }
+    
+    // Fase 6.1: Desangramiento Activo
+    if (this.isBleeding) {
+      this.currentHp -= 1;
+      this.bleedingDamage += 1;
+    }
 
     if (this.currentHp <= 0) {
       this.currentHp = 0;
@@ -109,6 +143,14 @@ export class Character {
 
     this.activeEffects = remainingEffects;
     this.recalculateResistances();
+    
+    // Fase 6.4: Acumulación Mágica
+    if (this.isChanneling) {
+      this.channeledZeon += this.zeonRegen;
+      if (this.channeledZeon > this.zeon) {
+        this.channeledZeon = this.zeon; // Cap at max Zeon available
+      }
+    }
   }
 
   public recalculateResistances() {
@@ -152,18 +194,22 @@ export class Character {
 
   public equipItem(itemId: string) {
     const item = this.inventory[itemId];
-    if (item && item.type === 'ARMADURA') {
+    if (item && (item.type === 'ARMADURA' || item.type === 'ARMA')) {
       item.equipped = true;
-      this.recalculateResistances();
+      if (item.type === 'ARMADURA') this.recalculateResistances();
     }
   }
 
   public unequipItem(itemId: string) {
     const item = this.inventory[itemId];
-    if (item && item.type === 'ARMADURA') {
+    if (item && (item.type === 'ARMADURA' || item.type === 'ARMA')) {
       item.equipped = false;
-      this.recalculateResistances();
+      if (item.type === 'ARMADURA') this.recalculateResistances();
     }
+  }
+
+  public getEquippedWeapon(): Item | null {
+    return Object.values(this.inventory).find(i => i.equipped && (i.type === 'ARMA' || i.isWeapon)) || null;
   }
 
   public useItem(itemId: string) {
@@ -291,5 +337,48 @@ export class Character {
       this.currentHp = 0;
       this.state = 'INCONSCIENTE';
     }
+  }
+
+  // Fase 6.4: Falla de Proyección Psíquica (Consumición)
+  public applyPsychicFailure(failureLevel: number) {
+    this.currentFatigue -= failureLevel;
+    if (this.currentFatigue < 0) {
+      this.currentFatigue = 0;
+      this.state = 'INCONSCIENTE'; // Colapso por consumición psíquica
+    }
+  }
+
+  // Fase 6.2: Cálculo de Penalizadores Físicos
+  public getPhysicalPenalty(): number {
+    let penalty = 0;
+    
+    // Penalizador por Agotamiento
+    if (this.currentFatigue <= 0) {
+      penalty -= 40;
+    }
+    
+    // Penalizador por Desangramiento
+    const bleedingPenalty = Math.floor(this.bleedingDamage / 5) * 10;
+    penalty -= bleedingPenalty;
+    
+    return penalty;
+  }
+  
+  // Extrae y prepara los datos para guardar en Prisma, incluyendo campos Fase 6
+  public toPrismaData() {
+    return {
+      hp: this.currentHp,
+      gold: this.gold,
+      ki: this.ki,
+      zeon: this.zeon,
+      dotes: this.activeEffects as any,
+      isBleeding: this.isBleeding,
+      bleedingDamage: this.bleedingDamage,
+      currentFatigue: this.currentFatigue,
+      maxFatigue: this.maxFatigue,
+      isChanneling: this.isChanneling,
+      channeledZeon: this.channeledZeon,
+      targetSpellId: this.targetSpellId
+    };
   }
 }
