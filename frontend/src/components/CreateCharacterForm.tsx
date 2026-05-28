@@ -22,6 +22,18 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
   const [gold, setGold] = useState("");
   const [ki, setKi] = useState("");
   const [zeon, setZeon] = useState("");
+  const [appearance, setAppearance] = useState("5");
+  const [nephilimType, setNephilimType] = useState("");
+  const [hasInhumanity, setHasInhumanity] = useState(false);
+  const [hasZen, setHasZen] = useState(false);
+
+  const [stats, setStats] = useState({
+    FUE: "5", DES: "5", AGI: "5", CON: "5", INT: "5", POD: "5", VOL: "5", PER: "5"
+  });
+
+  const handleStatChange = (stat: keyof typeof stats, val: string) => {
+    setStats(prev => ({ ...prev, [stat]: val }));
+  };
 
   const [resistances, setResistances] = useState({
     FIL: "",
@@ -54,7 +66,19 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
         ELE: parseInt(resistances.ELE, 10) || 0,
         FRI: parseInt(resistances.FRI, 10) || 0,
         ENE: parseInt(resistances.ENE, 10) || 0,
-      }
+      },
+      strength: parseInt(stats.FUE, 10) || 5,
+      dexterity: parseInt(stats.DES, 10) || 5,
+      agility: parseInt(stats.AGI, 10) || 5,
+      constitution: parseInt(stats.CON, 10) || 5,
+      intelligence: parseInt(stats.INT, 10) || 5,
+      power: parseInt(stats.POD, 10) || 5,
+      willpower: parseInt(stats.VOL, 10) || 5,
+      perception: parseInt(stats.PER, 10) || 5,
+      appearance: parseInt(appearance, 10) || 5,
+      nephilimType: nephilimType || null,
+      hasInhumanity,
+      hasZen
     };
 
     const newId = uuidv4();
@@ -73,7 +97,7 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
             Prepara tus atributos y armaduras para entrar al combate
           </p>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 overflow-y-auto max-h-[80vh]">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Columna 1: Atributos Generales */}
@@ -110,9 +134,40 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
                   <Input type="number" min="0" value={zeon} onChange={e => setZeon(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Ej. 0" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div className="grid gap-2">
+                  <label className="text-sm text-gray-400 font-medium">Raza / Nephilim</label>
+                  <select value={nephilimType} onChange={e => setNephilimType(e.target.value)} className="bg-gray-900 border-gray-700 text-white rounded p-2 text-sm">
+                    <option value="">Humano (Ninguno)</option>
+                    <option value="Sylvain">Sylvain</option>
+                    <option value="Jayan">Jayan</option>
+                    <option value="D'Anjayni">D'Anjayni</option>
+                    <option value="Ebudan">Ebudan</option>
+                    <option value="Duk'zarist">Duk'zarist</option>
+                    <option value="Daimah">Daimah</option>
+                    <option value="Vetala">Vetala</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm text-gray-400 font-medium">Apariencia (1-10)</label>
+                  <Input type="number" min="1" max="10" value={appearance} onChange={e => setAppearance(e.target.value)} className="bg-gray-900 border-gray-700" />
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2 text-sm text-gray-400">
+                  <input type="checkbox" checked={hasInhumanity} onChange={e => setHasInhumanity(e.target.checked)} className="bg-gray-900 border-gray-700" />
+                  Inhumanidad
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-400">
+                  <input type="checkbox" checked={hasZen} onChange={e => setHasZen(e.target.checked)} className="bg-gray-900 border-gray-700" />
+                  Zen
+                </label>
+              </div>
             </div>
 
-            {/* Columna 2: Resistencias (TA) */}
+            {/* Columna 2: Resistencias y Características */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-300 border-b border-gray-800 pb-2">
                 Armadura (Total de Armadura - TA)
@@ -129,6 +184,24 @@ export function CreateCharacterForm({ campaignId }: CreateCharacterFormProps) {
                       onChange={e => handleResChange(type as keyof typeof resistances, e.target.value)} 
                       className="bg-gray-900 border-gray-700 h-9" 
                       placeholder="0" 
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-lg font-semibold text-gray-300 border-b border-gray-800 pb-2 mt-4">
+                Características Primarias
+              </h3>
+              <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                {Object.keys(stats).map((stat) => (
+                  <div key={stat} className="grid gap-1">
+                    <label className="text-xs text-gray-400 font-medium">{stat}</label>
+                    <Input 
+                      type="number" 
+                      min="1" max="20"
+                      value={stats[stat as keyof typeof stats]} 
+                      onChange={e => handleStatChange(stat as keyof typeof stats, e.target.value)} 
+                      className="bg-gray-900 border-gray-700 h-9 px-1 text-center" 
                     />
                   </div>
                 ))}

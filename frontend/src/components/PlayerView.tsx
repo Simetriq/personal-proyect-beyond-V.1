@@ -234,7 +234,20 @@ export function PlayerView() {
       <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
         <Card className="panel-arcano">
           <CardHeader className="pb-0 pt-3 relative z-10">
-            <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider">Estado Vital</CardTitle>
+            <CardTitle className="text-xl font-serif text-transparent bg-clip-text bg-gradient-to-r from-anima-gold to-yellow-500 drop-shadow-[0_2px_2px_rgba(0,0,0,1)] uppercase tracking-wider flex items-center justify-between">
+              <span>{character.name || 'Estado Vital'}</span>
+            </CardTitle>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {character.nephilimType && (
+                <span className="bg-purple-900/60 border border-purple-500/50 text-purple-200 text-[9px] uppercase px-1.5 py-0.5 rounded shadow-[0_0_5px_rgba(168,85,247,0.4)]">Nephilim: {character.nephilimType}</span>
+              )}
+              {character.hasInhumanity && (
+                <span className="bg-red-900/60 border border-red-500/50 text-red-200 text-[9px] uppercase px-1.5 py-0.5 rounded shadow-[0_0_5px_rgba(239,68,68,0.4)]">Inhumanidad</span>
+              )}
+              {character.hasZen && (
+                <span className="bg-blue-900/60 border border-blue-500/50 text-blue-200 text-[9px] uppercase px-1.5 py-0.5 rounded shadow-[0_0_5px_rgba(59,130,246,0.4)]">Zen</span>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 p-3 pt-2 relative z-10">
             <div>
@@ -310,6 +323,18 @@ export function PlayerView() {
                   </Button>
                 )}
               </div>
+
+              {/* Fase 7: Recarga de Arma */}
+              {(character.reloadTurnsLeft ?? 0) > 0 && (
+                <div className="mt-2 p-1.5 bg-yellow-950/40 rounded border border-yellow-900/50 flex flex-col gap-1 items-center justify-center">
+                  <div className="flex items-center gap-2 text-yellow-500 font-bold animate-pulse text-xs uppercase tracking-wider">
+                    <span>⏳ Recargando Arma</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    Turnos restantes: <span className="text-white font-black">{character.reloadTurnsLeft}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 p-2.5 bg-[#161411] border-[2px] border-[#3a2b1c] rounded shadow-[inset_0_0_10px_rgba(0,0,0,1)]">
@@ -503,8 +528,36 @@ export function PlayerView() {
                   ))}
                 </div>
               </TabsContent>
-              <TabsContent value="ki" className="h-full m-0 p-0">
+              <TabsContent value="ki" className="h-full m-0 p-0 flex flex-col gap-4 overflow-y-auto pr-2 pb-4 scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent">
                 <KiTree characterId={CHARACTER_ID} />
+                
+                {/* FASE 7: Artes Marciales */}
+                <div className="bg-[#161411] border-[2px] border-[#3a2b1c] p-4 rounded shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative mt-4">
+                  <h3 className="text-xl font-serif text-anima-gold font-bold uppercase tracking-widest border-b border-[#3a2b1c] pb-2 mb-3 flex items-center gap-2">
+                    <span>🥋</span> Artes Marciales Conocidas
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {character.martialStyles && character.martialStyles.length > 0 ? (
+                      character.martialStyles.map((styleId: string) => (
+                        <div key={styleId} className="bg-[#2a2215] border border-[#5c4a35] rounded p-2 flex justify-between items-center shadow-[0_2px_5px_rgba(0,0,0,0.8)]">
+                          <span className="font-serif text-[#fcd97b] font-bold uppercase tracking-wide text-sm">{styleId.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] bg-[#161411] px-2 py-1 rounded text-gray-400 border border-[#3a2b1c]">Equipado</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 text-center text-[#8b7355] text-sm italic font-serif py-4">
+                        Aún no dominas ningún estilo de combate marcial.
+                      </div>
+                    )}
+                  </div>
+                  {character.activeMartialBonuses && character.martialStyles?.length > 0 && (
+                    <div className="mt-3 p-2 bg-[#0a0806] rounded border border-[#3a2b1c] text-xs text-gray-300 font-serif flex justify-between">
+                      <span>Daño Base: <span className="text-white font-bold">{character.activeMartialBonuses.damage}</span></span>
+                      <span>Bono Ataque: <span className="text-anima-blood font-bold">+{character.activeMartialBonuses.attackBonus}</span></span>
+                      <span>Bono Defensa: <span className="text-green-500 font-bold">+{character.activeMartialBonuses.defenseBonus}</span></span>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </CardContent>
           </Tabs>
@@ -709,6 +762,33 @@ export function PlayerView() {
             </div>
           </CardContent>
         </Card>
+
+        {/* FASE 7: Maniobras de Combate */}
+        <Card className="panel-arcano shrink-0 mt-2">
+          <CardHeader className="relative z-10 pb-2 pt-4">
+            <CardTitle className="text-lg font-serif text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] drop-shadow-md flex items-center gap-2 uppercase tracking-wider">
+              <span>⚔️</span> Actitud de Combate
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="p-3 bg-[#0a0806] rounded border border-[#3a2b1c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
+              <div className="text-sm font-serif text-[#8b7355] mb-2 uppercase tracking-widest text-center border-b border-[#3a2b1c] pb-1">Defensa Total</div>
+              <Button 
+                onClick={() => {
+                  const state = combatState.characterStates[CHARACTER_ID] || { isDefensive: false };
+                  useCombatStore.getState().setFullDefense(CHARACTER_ID, !state.isDefensive);
+                }}
+                className={`w-full h-10 font-bold font-serif uppercase tracking-widest border-2 transition-all shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10 ${combatState.characterStates[CHARACTER_ID]?.isDefensive ? 'bg-gradient-to-b from-blue-900 to-black text-blue-300 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-gradient-to-b from-[#2a2215] to-[#161411] text-[#5c4a35] border-[#3a2b1c] hover:border-[#c5a059] hover:text-[#c5a059]'}`}
+              >
+                {combatState.characterStates[CHARACTER_ID]?.isDefensive ? '🛡️ Defensa Total Activa' : 'Activar Defensa Total (+30)'}
+              </Button>
+              <div className="text-[10px] text-gray-500 text-center mt-2 font-serif italic leading-tight">
+                Decláralo antes de que el asalto se resuelva. Renuncias a todas tus acciones activas para enfocarte solo en defender.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
 
       {/* MODAL DE CRÍTICO RECIBIDO */}

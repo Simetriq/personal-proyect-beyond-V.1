@@ -1,5 +1,8 @@
 export interface RollOptions {
   mastery?: boolean;
+  isResistance?: boolean;
+  isFumbleLevel?: boolean;
+  isCritLevel?: boolean;
 }
 
 export interface RollResult {
@@ -55,7 +58,9 @@ export function rollD100(modifier: number, options?: RollOptions, mockRolls?: nu
   let openRollThreshold = 90;
   let isOpenRoll = false;
 
-  while (currentRoll >= openRollThreshold || currentRoll === 100) {
+  const canOpenRoll = !(options?.isResistance || options?.isFumbleLevel || options?.isCritLevel);
+
+  while (canOpenRoll && (currentRoll >= openRollThreshold || currentRoll === 100)) {
     isOpenRoll = true;
     currentRoll = getNextRoll();
     rolls.push(currentRoll);

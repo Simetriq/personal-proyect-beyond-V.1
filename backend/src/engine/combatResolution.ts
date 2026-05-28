@@ -11,6 +11,16 @@ export interface CombatResolutionResult {
   };
 }
 
+export interface CombatModifiers {
+  isAreaAttack?: boolean;
+  isDisarm?: boolean;
+  isFullDefense?: boolean;
+  aimedLocation?: string;
+  coverage?: 'PARTIAL' | 'MILITARY' | 'TOTAL';
+  burnedFatigueAttack?: number;  // 1 = +15, 2 = +30
+  burnedFatigueDefense?: number; // 1 = +15, 2 = +30
+}
+
 export function resolveAttack(
   attackRoll: number, 
   defenseRoll: number, 
@@ -19,9 +29,42 @@ export function resolveAttack(
   defenderHp: number,
   defenseType: 'BLOCK' | 'DODGE' = 'DODGE',
   attackerWeaponROT: number = 0,
-  defenderWeaponENT: number = 0
+  defenderWeaponENT: number = 0,
+  modifiers?: CombatModifiers
 ): CombatResolutionResult {
-  const diff = attackRoll - defenseRoll;
+  // Aplicar modificadores del backend (Fase 7)
+  let finalAttackRoll = attackRoll;
+  let finalDefenseRoll = defenseRoll;
+  let disarmAttempt = false;
+
+  if (modifiers) {
+    if (modifiers.isAreaAttack) finalAttackRoll -= 50;
+    if (modifiers.isDisarm) {
+      finalAttackRoll -= 40;
+      disarmAttempt = true;
+    }
+    if (modifiers.isFullDefense) {
+      finalDefenseRoll += 30; // +30 o +60, asumiendo base +30 aquí para simplificar
+    }
+    if (modifiers.aimedLocation) {
+      const AIMED_ATTACK_PENALTIES: Record<string, number> = {
+        'CABEZA': -60, 'OJOS': -100, 'CORAZON': -60, 'ABDOMEN': -20, 'BRAZO': -20, 'MUSLO': -20, 'PANTORRILLA': -10
+      };
+      finalAttackRoll += (AIMED_ATTACK_PENALTIES[modifiers.aimedLocation] || 0);
+    }
+    if (modifiers.coverage) {
+      const COVERAGE_PENALTIES: Record<string, number> = { 'PARTIAL': -40, 'MILITARY': -80, 'TOTAL': -120 };
+      finalAttackRoll += (COVERAGE_PENALTIES[modifiers.coverage] || 0);
+    }
+    if (modifiers.burnedFatigueAttack) {
+      finalAttackRoll += (modifiers.burnedFatigueAttack * 15);
+    }
+    if (modifiers.burnedFatigueDefense) {
+      finalDefenseRoll += (modifiers.burnedFatigueDefense * 15);
+    }
+  }
+
+  const diff = finalAttackRoll - finalDefenseRoll;
   
   if (diff < 0) {
     let rawBonus = Math.floor(Math.abs(diff) / 2);
@@ -41,11 +84,24 @@ export function resolveAttack(
       }
     }
     
+    if (disarmAttempt && diff >= -50) {
+      message += ` Intento de desarme fallido.`;
+    }
+    
     return {
       damage: 0,
       counterAttackBonus,
       message,
       weaponClash
+    };
+  }
+
+  // Si fue un desarme exitoso (diff > 0), el daño es 0 y se desarma
+  if (disarmAttempt) {
+    return {
+      damage: 0,
+      counterAttackBonus: 0,
+      message: `¡Desarme exitoso! (Dif: ${diff}). El defensor suelta su arma.`
     };
   }
 

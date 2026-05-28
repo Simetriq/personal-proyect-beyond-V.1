@@ -15,12 +15,28 @@ export function CombatCalculator() {
   const [baseDamage, setBaseDamage] = useState<number>(50);
   const [damageType, setDamageType] = useState<DamageType>("FIL");
   const [defenseType, setDefenseType] = useState<'BLOCK' | 'DODGE'>('DODGE');
+  
+  // Modifiers
+  const [isAreaAttack, setIsAreaAttack] = useState(false);
+  const [isDisarm, setIsDisarm] = useState(false);
+  const [aimedLocation, setAimedLocation] = useState<string>("");
+  const [coverage, setCoverage] = useState<string>("");
+  const [burnedFatigueAttack, setBurnedFatigueAttack] = useState<number>(0);
+  const [burnedFatigueDefense, setBurnedFatigueDefense] = useState<number>(0);
 
   const charList = Object.values(characters);
 
   const handleResolve = () => {
     if (!attackerId || !defenderId) return;
-    resolveAttack(attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType);
+    const modifiers = {
+      isAreaAttack,
+      isDisarm,
+      ...(aimedLocation && { aimedLocation }),
+      ...(coverage && { coverage }),
+      ...(burnedFatigueAttack > 0 && { burnedFatigueAttack }),
+      ...(burnedFatigueDefense > 0 && { burnedFatigueDefense })
+    };
+    resolveAttack(attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType, modifiers);
   };
 
   return (
@@ -100,6 +116,65 @@ export function CombatCalculator() {
                 <option value="FRI">Frío (FRI)</option>
                 <option value="ELE">Eléctrico (ELE)</option>
                 <option value="ENE">Energía (ENE)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-400">Maniobras Ofensivas</label>
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <input type="checkbox" checked={isAreaAttack} onChange={(e) => setIsAreaAttack(e.target.checked)} className="bg-gray-900 border-gray-700" />
+                  Ataque en Área (-50 HA)
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <input type="checkbox" checked={isDisarm} onChange={(e) => setIsDisarm(e.target.checked)} className="bg-gray-900 border-gray-700" />
+                  Desarmar (-40 HA)
+                </label>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div>
+                <label className="text-sm text-gray-400">Ataque Apuntado</label>
+                <select className="w-full bg-gray-900 border border-gray-700 text-white p-2 rounded mt-1 text-xs" value={aimedLocation} onChange={(e) => setAimedLocation(e.target.value)}>
+                  <option value="">Ninguno</option>
+                  <option value="CABEZA">Cabeza (-60)</option>
+                  <option value="OJOS">Ojos (-100)</option>
+                  <option value="CORAZON">Corazón (-60)</option>
+                  <option value="ABDOMEN">Abdomen (-20)</option>
+                  <option value="BRAZO">Brazo (-20)</option>
+                  <option value="MUSLO">Muslo (-20)</option>
+                  <option value="PANTORRILLA">Pantorrilla (-10)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400">Cobertura del Defensor</label>
+                <select className="w-full bg-gray-900 border border-gray-700 text-white p-2 rounded mt-1 text-xs" value={coverage} onChange={(e) => setCoverage(e.target.value)}>
+                  <option value="">Sin Cobertura</option>
+                  <option value="PARTIAL">Parcial (-40)</option>
+                  <option value="MILITARY">Militar (-80)</option>
+                  <option value="TOTAL">Total (-120)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-2 border-t border-[#3a2b1c] pt-2">
+            <div>
+              <label className="text-sm text-gray-400">Quemar Cansancio (Ataque)</label>
+              <select className="w-full bg-gray-900 border border-gray-700 text-white p-2 rounded mt-1 text-xs" value={burnedFatigueAttack} onChange={(e) => setBurnedFatigueAttack(Number(e.target.value))}>
+                <option value={0}>No quemar (0)</option>
+                <option value={1}>Quemar 1 Punto (+15 HA)</option>
+                <option value={2}>Quemar 2 Puntos (+30 HA)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-gray-400">Quemar Cansancio (Defensa)</label>
+              <select className="w-full bg-gray-900 border border-gray-700 text-white p-2 rounded mt-1 text-xs" value={burnedFatigueDefense} onChange={(e) => setBurnedFatigueDefense(Number(e.target.value))}>
+                <option value={0}>No quemar (0)</option>
+                <option value={1}>Quemar 1 Punto (+15 HD)</option>
+                <option value={2}>Quemar 2 Puntos (+30 HD)</option>
               </select>
             </div>
           </div>

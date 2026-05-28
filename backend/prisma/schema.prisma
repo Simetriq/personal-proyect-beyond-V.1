@@ -55,6 +55,27 @@ model Character {
   channeledZeon   Int            @default(0)
   targetSpellId   String?
 
+  // Fase 7: Combate a distancia y Artes Marciales
+  reloadTurnsLeft Int            @default(0)
+  martialStyles   Json           @default("[]")
+
+  // Fase 10 (Subfases B, C, D, E): Fisiología, Razas, Existenciales y Bases
+  strength        Int            @default(5)
+  dexterity       Int            @default(5)
+  agility         Int            @default(5)
+  constitution    Int            @default(5)
+  intelligence    Int            @default(5)
+  power           Int            @default(5)
+  willpower       Int            @default(5)
+  perception      Int            @default(5)
+  
+  appearance      Int            @default(5)
+  size            Int            @default(10)
+  nephilimType    String?
+  hasInhumanity   Boolean        @default(false)
+  hasZen          Boolean        @default(false)
+  isDead          Boolean        @default(false)
+
   activeEffects   ActiveEffect[]
   inventoryItems  InventoryItem[]
   campaign        Campaign       @relation(fields: [campaignId], references: [id])
@@ -97,6 +118,16 @@ model Item {
   isWeapon    Boolean  @default(false)
   breakage    Int      @default(0) // ROT
   fortitude   Int      @default(0) // ENT
+  
+  // Fase 7: Propiedades de arma avanzadas
+  hasPresa         Boolean  @default(false)
+  presaStrength    Int      @default(0)
+  reloadTurns      Int      @default(0)
+  isRanged         Boolean  @default(false)
+
+  // Fase 10: Modificadores de equipo
+  isEnormous       Boolean  @default(false)
+  material         String?
 
   inventoryItems InventoryItem[]
 }
@@ -108,6 +139,7 @@ model InventoryItem {
   quantity    Int      @default(1)
   equipped    Boolean  @default(false)
   isBroken    Boolean  @default(false) // Fase 6: Rotura de armas
+  quality     Int      @default(0)     // Fase 10: Calidad de Forja
   
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   item        Item      @relation(fields: [itemId], references: [id])

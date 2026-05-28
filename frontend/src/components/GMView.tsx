@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Skull, Droplet, FlaskConical, Zap, ArrowRight, FastForward, Swords } from "lucide-react";
+import { Shield, Swords, ArrowRight, FastForward, Droplet, Skull, FlaskConical, Zap, HeartPulse } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -147,6 +147,15 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
             <Skull className="w-4 h-4 text-red-200" />
           </Button>
         )}
+        {char.hp < 0 && char.state !== 'MUERTO' && (
+          <Button onClick={() => {
+            // Placeholder: This should emit an event to stabilize the character.
+            // For now we will update HP locally if GM clicks it
+            gmUpdateCharacter(char.id, { hp: 0, state: 'INCONSCIENTE', isBleeding: false });
+          }} size="sm" className="w-8 h-8 p-0 btn-piedra-runica bg-gradient-to-b from-pink-950 to-[#161411] border border-pink-900 hover:from-pink-900 hover:to-[#161411] transition-all active:scale-95 duration-100 relative z-10" title="Primeros Auxilios (Estabilizar a 0 HP)">
+            <HeartPulse className="w-4 h-4 text-pink-400" />
+          </Button>
+        )}
         
         <div className="flex gap-1 mr-2">
           <Button 
@@ -172,6 +181,13 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
             title="Aplicar Penalizador (Shock)"
           >
             <Zap className="w-4 h-4" />
+          </Button>
+          <Button 
+            onClick={() => useCombatStore.getState().setFullDefense(char.id, !combatStateData?.isDefensive)}
+            size="sm" className={`w-8 h-8 p-0 btn-piedra-runica transition-all active:scale-95 relative z-10 ${combatStateData?.isDefensive ? 'bg-gradient-to-b from-blue-900 to-[#161411] border-blue-500 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-gradient-to-b from-[#2a2215] to-[#161411] border-[#5c4a35] hover:border-blue-500 hover:text-blue-400 text-gray-500'}`}
+            title="Alternar Defensa Total"
+          >
+            <Shield className="w-4 h-4" />
           </Button>
         </div>
 

@@ -37,12 +37,33 @@ export interface Character {
   isChanneling?: boolean;
   channeledZeon?: number;
   targetSpellId?: string;
+  // Fase 7
+  reloadTurnsLeft?: number;
+  martialStyles?: string[];
+  activeMartialBonuses?: { damage: number; attackBonus: number; defenseBonus: number; freeManeuvers: string[] };
+  // Fase 10
+  strength?: number;
+  dexterity?: number;
+  agility?: number;
+  constitution?: number;
+  intelligence?: number;
+  power?: number;
+  willpower?: number;
+  perception?: number;
+  appearance?: number;
+  size?: number;
+  nephilimType?: string | null;
+  hasInhumanity?: boolean;
+  hasZen?: boolean;
+  isDead?: boolean;
 }
 
 export interface CharacterCombatState {
   isSurprised: boolean;
   isDefensive: boolean;
   hasActed: boolean;
+  isFullDefense?: boolean;
+  selectedManeuver?: any;
 }
 
 export interface CombatState {
@@ -71,7 +92,7 @@ export interface CombatStore {
   clearWeaponShattered: () => void;
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE') => void;
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: any) => void;
   spendFatigue: (characterId: string, amount: number) => void;
   startChanneling: (characterId: string, spellId: string) => void;
   stopChanneling: (characterId: string) => void;
@@ -97,6 +118,11 @@ export interface CombatStore {
   deactivateKiAbility: (characterId: string, abilityId: string) => void;
 
   rollDice: (characterId: string, description: string) => void;
+
+  // Fase 7
+  setFullDefense: (characterId: string, isFullDefense: boolean) => void;
+  equipMartialStyle: (characterId: string, styleId: string) => void;
+  unequipMartialStyle: (characterId: string, styleId: string) => void;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
@@ -250,10 +276,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE') => {
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: any) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
-      socket.emit('resolve_attack', { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType });
+      socket.emit('resolve_attack', { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType, modifiers });
     }
   },
 
@@ -439,6 +465,27 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         isOpen, 
         description 
       });
+    }
+  },
+
+  setFullDefense: (characterId: string, isFullDefense: boolean) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('combat:set_full_defense', { campaignId, characterId, isFullDefense });
+    }
+  },
+
+  equipMartialStyle: (characterId: string, styleId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('equip_martial_style', { campaignId, characterId, styleId });
+    }
+  },
+
+  unequipMartialStyle: (characterId: string, styleId: string) => {
+    const { socket, campaignId } = get();
+    if (socket && campaignId) {
+      socket.emit('unequip_martial_style', { campaignId, characterId, styleId });
     }
   }
 }));

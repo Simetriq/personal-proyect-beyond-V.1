@@ -1,5 +1,6 @@
 import { Resistances } from './Resistances';
 import { applyDirectDamage } from '../engine/combat';
+import { calculateCombinedStyle } from '../engine/martialArts';
 
 export type CharacterState = 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 
@@ -67,6 +68,27 @@ export class Character {
     resistir_dolor: 60
   };
 
+  // Fase 7
+  public reloadTurnsLeft: number;
+  public martialStyles: string[];
+  public activeMartialBonuses: { damage: number; attackBonus: number; defenseBonus: number; freeManeuvers: string[] } = { damage: 10, attackBonus: 0, defenseBonus: 0, freeManeuvers: [] };
+
+  // Fase 10
+  public strength: number;
+  public dexterity: number;
+  public agility: number;
+  public constitution: number;
+  public intelligence: number;
+  public power: number;
+  public willpower: number;
+  public perception: number;
+  
+  public appearance: number;
+  public nephilimType: string | null;
+  public hasInhumanity: boolean;
+  public hasZen: boolean;
+  public isDead: boolean;
+
   constructor(data: any) {
     this.id = data.id;
     this.name = data.name;
@@ -102,6 +124,27 @@ export class Character {
     this.isChanneling = data.isChanneling || false;
     this.channeledZeon = data.channeledZeon || 0;
     this.targetSpellId = data.targetSpellId || null;
+
+    // Fase 7
+    this.reloadTurnsLeft = data.reloadTurnsLeft || 0;
+    this.martialStyles = Array.isArray(data.martialStyles) ? data.martialStyles : [];
+    this.activeMartialBonuses = calculateCombinedStyle(this.martialStyles);
+
+    // Fase 10
+    this.strength = data.strength ?? 5;
+    this.dexterity = data.dexterity ?? 5;
+    this.agility = data.agility ?? 5;
+    this.constitution = data.constitution ?? 5;
+    this.intelligence = data.intelligence ?? 5;
+    this.power = data.power ?? 5;
+    this.willpower = data.willpower ?? 5;
+    this.perception = data.perception ?? 5;
+    
+    this.appearance = data.appearance ?? 5;
+    this.nephilimType = data.nephilimType || null;
+    this.hasInhumanity = data.hasInhumanity || false;
+    this.hasZen = data.hasZen || false;
+    this.isDead = data.isDead || false;
 
     // Calculamos las resistencias totales (base + equipamiento)
     this.resistances = new Resistances();
@@ -151,6 +194,48 @@ export class Character {
         this.channeledZeon = this.zeon; // Cap at max Zeon available
       }
     }
+
+    // Fase 7: Recarga
+    this.tickReload();
+  }
+
+  // Fase 7: Recalcular Artes Marciales
+  public recalculateMartialArts() {
+    this.activeMartialBonuses = calculateCombinedStyle(this.martialStyles);
+  }
+
+  // Fase 7: Recarga
+  public tickReload(): void {
+    if (this.reloadTurnsLeft > 0) {
+      this.reloadTurnsLeft--;
+    }
+  }
+
+  // --- Subfase B: Fisiología de Personaje ---
+
+  public getSize(): number {
+    return this.strength + this.constitution;
+  }
+
+  public getMaxLoad(): number {
+    // Tabla básica aproximada (Reglas Básicas p. 55)
+    // El índice de peso se basa en la Fuerza.
+    // Asumiremos un límite directo o llamaremos a physics.ts
+    // Por simplicidad en dominio, calcularemos una base de peso.
+    const weightIndex = this.strength;
+    return weightIndex * 10; // Placeholder para kg máximos
+  }
+
+  public getJumpDistance(): number {
+    return Math.max(1, this.agility / 2); // Placeholder para distancia
+  }
+
+  public canFire(): boolean {
+    return this.reloadTurnsLeft <= 0;
+  }
+
+  public startReload(turns: number): void {
+    this.reloadTurnsLeft = turns;
   }
 
   public recalculateResistances() {
@@ -378,7 +463,23 @@ export class Character {
       maxFatigue: this.maxFatigue,
       isChanneling: this.isChanneling,
       channeledZeon: this.channeledZeon,
-      targetSpellId: this.targetSpellId
+      targetSpellId: this.targetSpellId,
+      reloadTurnsLeft: this.reloadTurnsLeft,
+      martialStyles: this.martialStyles as any,
+      strength: this.strength,
+      dexterity: this.dexterity,
+      agility: this.agility,
+      constitution: this.constitution,
+      intelligence: this.intelligence,
+      power: this.power,
+      willpower: this.willpower,
+      perception: this.perception,
+      appearance: this.appearance,
+      size: this.getSize(),
+      nephilimType: this.nephilimType,
+      hasInhumanity: this.hasInhumanity,
+      hasZen: this.hasZen,
+      isDead: this.isDead
     };
   }
 }

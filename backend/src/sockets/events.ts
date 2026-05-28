@@ -5,6 +5,9 @@ import { CharacterRepository } from '../repositories/CharacterRepository';
 import { ABILITIES_REGISTRY } from '../domain/abilitiesRegistry';
 import { BuyKiAbilityCommand, ActivateKiAbilityCommand, DeactivateKiAbilityCommand } from '../domain/ki/KiCommands';
 import { resolveAttack } from '../engine/combatResolution';
+import { roll1d100 } from '../engine/dice';
+import { isAgony, evaluateDeathState } from '../engine/health';
+import { tickBleeding } from '../engine/bleeding';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
@@ -58,7 +61,23 @@ export function setupSocketEvents(io: Server) {
               zeon: character.zeon,
               temporaryShield: character.temporaryShield,
               currentInitiative: character.currentInitiative,
-              kiAbilities: character.kiAbilities
+              kiAbilities: character.kiAbilities,
+              reloadTurnsLeft: character.reloadTurnsLeft,
+              martialStyles: character.martialStyles,
+              activeMartialBonuses: character.activeMartialBonuses,
+              strength: character.strength,
+              dexterity: character.dexterity,
+              agility: character.agility,
+              constitution: character.constitution,
+              intelligence: character.intelligence,
+              power: character.power,
+              willpower: character.willpower,
+              perception: character.perception,
+              appearance: character.appearance,
+              nephilimType: character.nephilimType,
+              hasInhumanity: character.hasInhumanity,
+              hasZen: character.hasZen,
+              isDead: character.isDead
             });
           }
         }
@@ -79,13 +98,118 @@ export function setupSocketEvents(io: Server) {
               zeon: npc.zeon,
               temporaryShield: npc.temporaryShield,
               currentInitiative: npc.currentInitiative,
-              kiAbilities: npc.kiAbilities
+              kiAbilities: npc.kiAbilities,
+              reloadTurnsLeft: npc.reloadTurnsLeft,
+              martialStyles: npc.martialStyles,
+              activeMartialBonuses: npc.activeMartialBonuses,
+              strength: npc.strength,
+              dexterity: npc.dexterity,
+              agility: npc.agility,
+              constitution: npc.constitution,
+              intelligence: npc.intelligence,
+              power: npc.power,
+              willpower: npc.willpower,
+              perception: npc.perception,
+              appearance: npc.appearance,
+              nephilimType: npc.nephilimType,
+              hasInhumanity: npc.hasInhumanity,
+              hasZen: npc.hasZen,
+              isDead: npc.isDead
             });
         }
         
         socket.emit('combat_state_updated', getCombatTracker(campaignId).getPublicState());
       } catch (e) {
         console.error('[Socket] Error on join_campaign sync:', e);
+      }
+    });
+
+    // --- Fase 10 (Subfase C): Ciclo de Agonía y Desangramiento ---
+    socket.on('combat:tick_minute', async (campaignId: string) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const dbCharacters = await prisma.character.findMany({ where: { campaignId } });
+        
+        // PCs
+        for (const dbChar of dbCharacters) {
+          const character = await repo.findById(dbChar.id);
+          if (character && character.isBleeding && !character.isDead) {
+            tickBleeding(character);
+            await saveCharacter(character);
+            broadcastCharacterUpdate(campaignId, character);
+          }
+        }
+        
+        // NPCs
+        const npcs = getCampaignNpcs(campaignId);
+        for (const character of npcs.values()) {
+          if (character.isBleeding && !character.isDead) {
+            tickBleeding(character);
+            broadcastCharacterUpdate(campaignId, character);
+          }
+        }
+      } catch (e) {
+        console.error('[Socket] Error on tick_minute:', e);
+      }
+    });
+
+    socket.on('combat:tick_hour', async (campaignId: string) => {
+      try {
+        const repo = new CharacterRepository(prisma);
+        const dbCharacters = await prisma.character.findMany({ where: { campaignId } });
+        
+        const processHour = async (character: any) => {
+          if (character.isDead) return false;
+          
+          let changed = false;
+          if (isAgony(character.currentHp, character.constitution)) {
+            // RF contra 120
+            const rfTotal = character.resistances.RF + roll1d100();
+            if (rfTotal >= 120) {
+              // Estabilizado
+              character.currentHp = 0;
+              character.state = 'INCONSCIENTE';
+              character.isBleeding = false;
+              // Add a -60 stabilization debuff
+              character.activeEffects.push({
+                id: Math.random().toString(36).substring(7),
+                name: 'Estabilizado (Heridas graves)',
+                characterId: character.id,
+                modifiers: { HA: -60, HD: -60, ACCION: -60 },
+                duration_rounds: 9999,
+                createdAt: new Date()
+              });
+              changed = true;
+            } else {
+              // Si falla por > 60 muere
+              if (120 - rfTotal > 60) {
+                character.isDead = true;
+                character.state = 'MUERTO';
+                changed = true;
+              }
+            }
+          }
+          return changed;
+        };
+
+        // PCs
+        for (const dbChar of dbCharacters) {
+          const character = await repo.findById(dbChar.id);
+          if (character && await processHour(character)) {
+            await saveCharacter(character);
+            broadcastCharacterUpdate(campaignId, character);
+          }
+        }
+        
+        // NPCs
+        const npcs = getCampaignNpcs(campaignId);
+        for (const character of npcs.values()) {
+          if (await processHour(character)) {
+            broadcastCharacterUpdate(campaignId, character);
+          }
+        }
+      } catch (e) {
+        console.error('[Socket] Error on tick_hour:', e);
       }
     });
 
@@ -146,7 +270,10 @@ export function setupSocketEvents(io: Server) {
         zeon: character.zeon,
         temporaryShield: character.temporaryShield,
         currentInitiative: character.currentInitiative,
-        kiAbilities: character.kiAbilities
+        kiAbilities: character.kiAbilities,
+        reloadTurnsLeft: character.reloadTurnsLeft,
+        martialStyles: character.martialStyles,
+        activeMartialBonuses: character.activeMartialBonuses
       });
     };
 
@@ -236,8 +363,8 @@ export function setupSocketEvents(io: Server) {
       }
     });
 
-    socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE' }) => {
-      const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType = 'DODGE' } = data;
+    socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE', modifiers?: any }) => {
+      const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType = 'DODGE', modifiers } = data;
       try {
         const attacker = await loadCharacter(campaignId, attackerId);
         const defender = await loadCharacter(campaignId, defenderId);
@@ -269,10 +396,20 @@ export function setupSocketEvents(io: Server) {
         // FASE 6.3: Choque de Armas
         const attackerWeapon = attacker.getEquippedWeapon();
         const defenderWeapon = defender.getEquippedWeapon();
-        const attackerROT = attackerWeapon ? (attackerWeapon.breakage || 0) : 0;
-        const defenderENT = defenderWeapon ? (defenderWeapon.fortitude || 0) : 0;
+        const attackerWeaponROT = attackerWeapon ? (attackerWeapon.breakage || 0) : 0;
+        const defenderWeaponENT = defenderWeapon ? (defenderWeapon.fortitude || 0) : 0;
 
-        const result = resolveAttack(finalAttackRoll, finalDefenseRoll, baseDamage, ta, defender.hp, defenseType, attackerROT, defenderENT);
+        const result = resolveAttack(
+          finalAttackRoll, 
+          finalDefenseRoll, 
+          baseDamage, 
+          ta,
+          defender.currentHp,
+          defenseType,
+          attackerWeaponROT,
+          defenderWeaponENT,
+          modifiers
+        );
         
         if (result.weaponClash && result.weaponClash.broken && defenderWeapon) {
           defenderWeapon.isBroken = true;
@@ -653,6 +790,45 @@ export function setupSocketEvents(io: Server) {
         getCampaignNpcs(data.campaignId).set(characterId, npc);
         broadcastCharacterUpdate(data.campaignId, npc);
       } catch(e) { console.error(e); }
+    });
+
+    socket.on('delete_dice_roll', (data: { campaignId: string, timestamp: number }) => {
+      io.to(data.campaignId).emit('dice_roll_deleted', { timestamp: data.timestamp });
+    });
+
+    // FASE 7: Maniobras y Artes Marciales
+    socket.on('combat:set_full_defense', async (data: { campaignId: string, characterId: string, isFullDefense: boolean }) => {
+      const tracker = getCombatTracker(data.campaignId);
+      const state = tracker.characterStates.get(data.characterId) || { isSurprised: false, isDefensive: false, hasActed: false };
+      state.isDefensive = data.isFullDefense;
+      tracker.characterStates.set(data.characterId, state);
+      broadcastCombatState(data.campaignId);
+    });
+
+    socket.on('equip_martial_style', async (data: { campaignId: string, characterId: string, styleId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          if (!character.martialStyles.includes(data.styleId)) {
+            character.martialStyles.push(data.styleId);
+            character.recalculateMartialArts();
+            await saveCharacter(character);
+            broadcastCharacterUpdate(data.campaignId, character);
+          }
+        }
+      } catch (e) { console.error(e); }
+    });
+
+    socket.on('unequip_martial_style', async (data: { campaignId: string, characterId: string, styleId: string }) => {
+      try {
+        const character = await loadCharacter(data.campaignId, data.characterId);
+        if (character) {
+          character.martialStyles = character.martialStyles.filter((s: string) => s !== data.styleId);
+          character.recalculateMartialArts();
+          await saveCharacter(character);
+          broadcastCharacterUpdate(data.campaignId, character);
+        }
+      } catch (e) { console.error(e); }
     });
 
     socket.on('remove_npc', (data: { campaignId: string, characterId: string }) => {
