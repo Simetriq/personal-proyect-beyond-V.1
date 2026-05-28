@@ -13,10 +13,10 @@ import { KiAccumulator } from "./ui/KiAccumulator";
 import { DiceRoller } from "./ui/DiceRoller";
 
 const ITEM_ICONS: Record<string, string> = {
-  'item-potion-minor': '/assets/icons/gen_potion_minor.png',
-  'item-potion-major': '/assets/icons/gen_potion_major.png',
-  'item-antidote': '/assets/icons/gen_antidote.png',
-  'item-leather-armor': '/assets/icons/gen_leather_armor.png',
+  'item-potion-minor': '/assets/icons/gen_potion_minor.webp',
+  'item-potion-major': '/assets/icons/gen_potion_major.webp',
+  'item-antidote': '/assets/icons/gen_antidote.webp',
+  'item-leather-armor': '/assets/icons/gen_leather_armor.webp',
 };
 
 export function PlayerView() {
@@ -357,7 +357,7 @@ export function PlayerView() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-semibold">Equipamiento</h3>
                   <span className="text-anima-gold font-bold flex items-center gap-2 bg-[#1a1714] px-3 py-1 rounded-full border border-[#4a3b2c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
-                    <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-5 h-5 object-contain drop-shadow-md" /> {gold} Oro
+                    <img src="/assets/icons/gen_gold.webp" alt="Oro" className="w-5 h-5 object-contain drop-shadow-md" /> {gold} Oro
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
@@ -372,7 +372,7 @@ export function PlayerView() {
                             {/* Icono a la izquierda */}
                             <div className="w-[90px] h-full flex-shrink-0 bg-[#2a2215] border-r-[3px] border-[#3a2b1c] flex items-center justify-center p-2">
                               <div className="w-14 h-14 rounded-full bg-[#161411] border-2 border-[#111] shadow-[inset_0_0_15px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden">
-                                <img src={ITEM_ICONS[item.id] || '/assets/icons/gen_ki_default.png'} alt={item.name} className="w-[150%] h-[150%] object-cover object-center drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
+                                <img src={ITEM_ICONS[item.id] || '/assets/icons/gen_ki_default.webp'} alt={item.name} className="w-[150%] h-[150%] object-cover object-center drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
                               </div>
                             </div>
 
@@ -421,16 +421,16 @@ export function PlayerView() {
                 <div className="flex justify-between items-center mb-6 relative z-10 border-b border-[#4a3b2c] pb-2">
                   <h3 className="text-2xl font-serif font-bold text-anima-gold tracking-widest drop-shadow-md">Mercader Local</h3>
                   <span className="text-anima-gold font-bold flex items-center gap-2 bg-[#1a1714] px-4 py-1 rounded-full border border-[#4a3b2c] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
-                    <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-6 h-6 object-contain drop-shadow-md" /> {gold} Oro
+                    <img src="/assets/icons/gen_gold.webp" alt="Oro" className="w-6 h-6 object-contain drop-shadow-md" /> {gold} Oro
                   </span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-8 relative z-10">
                   {[
-                    { id: 'item-potion-minor', name: 'Poción de Vida Menor', cost: 10, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_minor.png', mods: null },
-                    { id: 'item-potion-major', name: 'Poción de Vida Mayor', cost: 30, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_major.png', mods: null },
-                    { id: 'item-antidote', name: 'Antídoto', cost: 15, type: 'CONSUMIBLE', icon: '/assets/icons/gen_antidote.png', mods: null },
-                    { id: 'item-leather-armor', name: 'Coraza de Cuero', cost: 90, type: 'ARMADURA', icon: '/assets/icons/gen_leather_armor.png', mods: { FIL: 2, CON: 1, PEN: 1 } },
+                    { id: 'item-potion-minor', name: 'Poción de Vida Menor', cost: 10, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_minor.webp', mods: null },
+                    { id: 'item-potion-major', name: 'Poción de Vida Mayor', cost: 30, type: 'CONSUMIBLE', icon: '/assets/icons/gen_potion_major.webp', mods: null },
+                    { id: 'item-antidote', name: 'Antídoto', cost: 15, type: 'CONSUMIBLE', icon: '/assets/icons/gen_antidote.webp', mods: null },
+                    { id: 'item-leather-armor', name: 'Coraza de Cuero', cost: 90, type: 'ARMADURA', icon: '/assets/icons/gen_leather_armor.webp', mods: { FIL: 2, CON: 1, PEN: 1 } },
                   ].map(shopItem => (
                     <div key={shopItem.id} className="relative bg-[#161411] p-1.5 rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.9)] border border-[#111]">
                       {/* Marco exterior metálico */}
@@ -465,7 +465,7 @@ export function PlayerView() {
                                 disabled={gold < shopItem.cost}
                                 className="h-8 btn-piedra-runica bg-gradient-to-b from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border-2 border-anima-gold text-anima-gold text-xs font-bold rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)] disabled:opacity-50 disabled:border-gray-600 disabled:text-gray-500"
                               >
-                                Comprar ({shopItem.cost} <img src="/assets/icons/gen_gold.png" alt="Oro" className="w-3 h-3 object-contain inline-block ml-0.5" />)
+                                Comprar ({shopItem.cost} <img src="/assets/icons/gen_gold.webp" alt="Oro" className="w-3 h-3 object-contain inline-block ml-0.5" />)
                               </Button>
                             </div>
                           </div>

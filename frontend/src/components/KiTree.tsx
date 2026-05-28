@@ -13,13 +13,15 @@ const KiAbilityNode = ({ data }: { data: any }) => {
   
   let ringStyle = "border-gray-700 shadow-none";
   let bgStyle = "bg-[#161224]/50 opacity-40";
-  let iconSrc = "/assets/icons/gen_ki_default.png";
+  let iconSrc = "/assets/icons/gen_ki_default.webp";
+  if (ability.icon) iconSrc = ability.icon;
+  else {
+    if (ability.effectType === 'PASSIVE' || ability.effectType === 'UI_BADGE') iconSrc = "/assets/icons/gen_ki_passive.webp";
+    else if (ability.effectType === 'DEFENSE') iconSrc = "/assets/icons/gen_ki_defense.webp";
+    else if (ability.effectType === 'DAMAGE') iconSrc = "/assets/icons/gen_ki_damage.webp";
+    else if (ability.effectType === 'BUFF') iconSrc = "/assets/icons/gen_ki_buff.webp";
+  }
   let glowStyle = "";
-
-  if (ability.effectType === 'PASSIVE' || ability.effectType === 'UI_BADGE') iconSrc = "/assets/icons/gen_ki_passive.png";
-  else if (ability.effectType === 'DEFENSE') iconSrc = "/assets/icons/gen_ki_defense.png";
-  else if (ability.effectType === 'DAMAGE') iconSrc = "/assets/icons/gen_ki_damage.png";
-  else if (ability.effectType === 'BUFF') iconSrc = "/assets/icons/gen_ki_buff.png";
 
   if (bought) {
     ringStyle = "border-anima-gold shadow-[0_0_25px_rgba(197,160,89,0.7)]";
