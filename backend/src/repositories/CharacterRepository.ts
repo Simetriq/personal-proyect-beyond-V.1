@@ -30,13 +30,16 @@ export class CharacterRepository {
           quantity: inv.quantity,
           type: inv.item.type as any,
           equipped: inv.equipped,
-          modifiers: inv.item.modifiers as any
+          modifiers: inv.item.modifiers ? JSON.parse(inv.item.modifiers as string) : undefined
         };
       }
     }
 
     const domainData = {
       ...data,
+      resistances: typeof data.resistances === 'string' ? JSON.parse(data.resistances) : data.resistances,
+      dotes: typeof data.dotes === 'string' ? JSON.parse(data.dotes) : data.dotes,
+      kiAbilities: typeof data.kiAbilities === 'string' ? JSON.parse(data.kiAbilities) : data.kiAbilities,
       inventory: inventoryDict
     };
 
@@ -55,8 +58,9 @@ export class CharacterRepository {
         zeon: data.zeon,
         initiative_base: 0,
         gold: data.gold,
-        resistances: data.resistances,
-        dotes: [],
+        resistances: JSON.stringify(data.resistances || {}),
+        dotes: JSON.stringify([]),
+        kiAbilities: JSON.stringify([]),
         isBleeding: false,
         bleedingDamage: 0,
         currentFatigue: 5,
@@ -82,8 +86,8 @@ export class CharacterRepository {
           gold: character.gold,
           ki: character.ki,
           zeon: character.zeon,
-          kiAbilities: character.kiAbilities,
-          resistances: {
+          kiAbilities: JSON.stringify(character.kiAbilities || []),
+          resistances: JSON.stringify({
             FIL: character.baseResistances.FIL,
             CON: character.baseResistances.CON,
             PEN: character.baseResistances.PEN,
@@ -91,8 +95,8 @@ export class CharacterRepository {
             ELE: character.baseResistances.ELE,
             FRI: character.baseResistances.FRI,
             ENE: character.baseResistances.ENE
-          },
-          dotes: character.activeEffects ? JSON.parse(JSON.stringify(character.activeEffects)) : [],
+          }),
+          dotes: JSON.stringify(character.activeEffects || []),
           isBleeding: character.isBleeding,
           bleedingDamage: character.bleedingDamage,
           currentFatigue: character.currentFatigue,
@@ -122,7 +126,7 @@ export class CharacterRepository {
               id: item.id,
               name: item.name,
               type: item.type,
-              modifiers: item.modifiers ? JSON.parse(JSON.stringify(item.modifiers)) : undefined
+              modifiers: item.modifiers ? JSON.stringify(item.modifiers) : undefined
             }
           });
         }

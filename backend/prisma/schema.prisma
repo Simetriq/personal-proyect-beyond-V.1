@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -36,9 +36,9 @@ model Character {
   zeon            Int
   initiative_base Int
   gold            Float          @default(0)
-  resistances     Json
-  dotes           Json
-  kiAbilities     Json           @default("[]")
+  resistances     String
+  dotes           String
+  kiAbilities     String         @default("[]")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   
@@ -57,7 +57,7 @@ model Character {
 
   // Fase 7: Combate a distancia y Artes Marciales
   reloadTurnsLeft Int            @default(0)
-  martialStyles   Json           @default("[]")
+  martialStyles   String         @default("[]")
 
   // Fase 10 (Subfases B, C, D, E): Fisiología, Razas, Existenciales y Bases
   strength        Int            @default(5)
@@ -85,7 +85,7 @@ model ActiveEffect {
   id              String    @id @default(uuid())
   name            String
   characterId     String
-  modifiers       Json
+  modifiers       String
   duration_rounds Int
   createdAt       DateTime  @default(now())
   character       Character @relation(fields: [characterId], references: [id])
@@ -95,7 +95,7 @@ model KiAbility {
   id                String   @id
   name              String
   cmCost            Int
-  prerequisites     Json     @default("[]")
+  prerequisites     String   @default("[]")
   effectType        String
   kiCostActivation  Int
   kiCostMaintenance Int      @default(0)
@@ -110,7 +110,7 @@ model Item {
   description String?
   type        String   // "WEAPON", "ARMOR", "CONSUMABLE", "MISC"
   baseDamage  Int?
-  modifiers   Json?    // e.g. { "FIL": 10, "CON": 5 }
+  modifiers   String?    // e.g. { "FIL": 10, "CON": 5 }
   weight      Float?
   price       Float?
   
