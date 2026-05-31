@@ -12,10 +12,14 @@ async function main() {
   const abilities = JSON.parse(rawData);
 
   for (const ability of abilities) {
+    const data = {
+      ...ability,
+      prerequisites: JSON.stringify(ability.prerequisites)
+    };
     await prisma.kiAbility.upsert({
       where: { id: ability.id },
-      update: ability,
-      create: ability,
+      update: data,
+      create: data,
     });
     console.log(`✅ Habilidad inyectada: ${ability.name}`);
   }

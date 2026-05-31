@@ -73,7 +73,15 @@ export class CharacterRepository {
       }
     });
 
-    return new Character({ ...dbChar, inventory: {} });
+    const domainData = {
+      ...dbChar,
+      resistances: typeof dbChar.resistances === 'string' ? JSON.parse(dbChar.resistances) : dbChar.resistances,
+      dotes: typeof dbChar.dotes === 'string' ? JSON.parse(dbChar.dotes) : dbChar.dotes,
+      kiAbilities: typeof dbChar.kiAbilities === 'string' ? JSON.parse(dbChar.kiAbilities) : dbChar.kiAbilities,
+      inventory: {}
+    };
+
+    return new Character(domainData);
   }
 
   async save(character: Character): Promise<void> {

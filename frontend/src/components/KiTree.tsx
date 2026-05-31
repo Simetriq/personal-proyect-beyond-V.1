@@ -57,9 +57,7 @@ const KiAbilityNode = ({ data }: { data: any }) => {
   );
 };
 
-const nodeTypes = {
-  kiNode: KiAbilityNode,
-};
+// nodeTypes memoized inside the component to avoid React Flow warnings
 
 interface KiTreeProps {
   characterId: string;
@@ -69,6 +67,10 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
   const { characters, buyKiAbility, activateKiAbility, deactivateKiAbility } = useCombatStore();
   const character = characters[characterId];
   const [selectedAbilityId, setSelectedAbilityId] = useState<string | null>(null);
+
+  const nodeTypes = useMemo(() => ({
+    kiNode: KiAbilityNode,
+  }), []);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedAbilityId(node.id);
@@ -186,22 +188,24 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
           </div>
         </div>
 
-        <ReactFlow 
-          nodes={initialNodes} 
-          edges={initialEdges} 
-          nodeTypes={nodeTypes}
-          onNodeClick={onNodeClick}
-          onPaneClick={() => setSelectedAbilityId(null)}
-          fitView
-          className="bg-transparent w-full h-full"
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background color="rgba(255,255,255,0.05)" gap={30} size={2} />
-          <Controls 
-            position="bottom-left" 
-            className="mb-6 ml-2 flex flex-col gap-1 bg-transparent shadow-none border-none [&>button]:!bg-[#161224] [&>button]:!border [&>button]:!border-[#4a3b2c] [&>button]:!rounded [&>button]:!shadow-md [&>button:hover]:!bg-[#2a2215] [&>button_svg]:!fill-[#c5a059] [&>button_svg]:!w-4 [&>button_svg]:!h-4" 
-          />
-        </ReactFlow>
+        <div style={{ width: '100%', height: '100%' }}>
+          <ReactFlow 
+            nodes={initialNodes} 
+            edges={initialEdges} 
+            nodeTypes={nodeTypes}
+            onNodeClick={onNodeClick}
+            onPaneClick={() => setSelectedAbilityId(null)}
+            fitView
+            className="bg-transparent w-full h-full"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="rgba(255,255,255,0.05)" gap={30} size={2} />
+            <Controls 
+              position="bottom-left" 
+              className="mb-6 ml-2 flex flex-col gap-1 bg-transparent shadow-none border-none [&>button]:!bg-[#161224] [&>button]:!border [&>button]:!border-[#4a3b2c] [&>button]:!rounded [&>button]:!shadow-md [&>button:hover]:!bg-[#2a2215] [&>button_svg]:!fill-[#c5a059] [&>button_svg]:!w-4 [&>button_svg]:!h-4" 
+            />
+          </ReactFlow>
+        </div>
       </div>
 
       {/* Panel Lateral de Detalles */}
