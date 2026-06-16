@@ -5,10 +5,12 @@ import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { v4 as uuidv4 } from "uuid";
 import { useCombatStore } from "../store/combatStore";
 import { CombatCalculator } from "./CombatCalculator";
 import { DiceRoller } from "./ui/DiceRoller";
+import { GameMasterDashboard } from "./GameMasterDashboard";
 
 function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: any, combatStateData: any, gmUpdateCharacter: any, applyEffect: any, isActiveTurn: boolean, removeNpc: any }) {
   const [hp, setHp] = useState(char.hp);
@@ -292,12 +294,15 @@ function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: any, campaignId: st
 }
 
 export function GMView() {
-  const { characters, connectToCampaign, gmUpdateCharacter, applyEffect, nextRoundTick, combatState, requestInitiatives, nextTurn, spawnNpc, removeNpc } = useCombatStore();
+  const { socket, characters, connectToCampaign, gmUpdateCharacter, applyEffect, nextRoundTick, combatState, requestInitiatives, nextTurn, spawnNpc, removeNpc } = useCombatStore();
   const CAMPAIGN_ID = "camp-1";
 
   useEffect(() => {
     connectToCampaign(CAMPAIGN_ID);
-  }, [connectToCampaign]);
+    if (socket) {
+      socket.emit('join_gm_room');
+    }
+  }, [connectToCampaign, socket]);
 
   // Sort characters based on initiative queue
   const charList = Object.values(characters).sort((a, b) => {
@@ -312,79 +317,94 @@ export function GMView() {
   const activeCharId = combatState.initiativeQueue[combatState.turnIndex]?.characterId;
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4 text-white">
-      {/* Header de Combate */}
-      <div className="flex justify-between items-center bg-anima-panel/80 p-5 rounded-lg border border-anima-gold/30 shadow-glass-gold backdrop-blur-md">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-anima-gold tracking-wide flex items-center gap-3 drop-shadow-md">
-            Consola del GM 
-            <span className="bg-black/50 text-anima-goldglow px-3 py-1 rounded-md text-sm border border-anima-gold/50 shadow-glow-gold font-sans">
-              Asalto {combatState.round}
-            </span>
-          </h1>
-          <p className="text-gray-400 text-sm mt-1 font-serif">Campaña: La Sombra del Omega</p>
-        </div>
-        <div className="flex gap-3 flex-wrap relative z-10">
-          <CombatCalculator />
-          <AddEnemyModal spawnNpc={spawnNpc} campaignId={CAMPAIGN_ID} />
-          <Button onClick={requestInitiatives} className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-xs font-serif uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
-            {combatState.isRequestingInitiative ? 'Esperando Tiradas...' : 'Pedir Iniciativas'}
-          </Button>
-          <Button onClick={nextTurn} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-green-950 to-[#161411] hover:from-green-900 hover:to-[#161411] border border-green-900 text-green-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
-            Siguiente Turno <ArrowRight className="w-4 h-4 text-green-400" />
-          </Button>
-          <Button onClick={nextRoundTick} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-blue-950 to-[#161411] hover:from-blue-900 hover:to-[#161411] border border-blue-900 text-blue-200 shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold uppercase tracking-widest text-xs transition-all active:scale-95 duration-100 hover:scale-105 relative z-10">
-            Siguiente Asalto <FastForward className="w-4 h-4 text-blue-400" />
-          </Button>
-        </div>
-      </div>
+    <Tabs defaultValue="combate" className="flex flex-col h-full p-4 gap-4 text-white">
+      <TabsList className="bg-[#161411] border border-[#3a2b1c] p-1 gap-2 flex w-fit">
+        <TabsTrigger value="combate" className="btn-piedra-runica data-[state=active]:border-anima-gold data-[state=active]:text-anima-goldglow data-[state=active]:shadow-glow-gold">
+          Combate y Mesa
+        </TabsTrigger>
+        <TabsTrigger value="progression" className="btn-piedra-runica data-[state=active]:border-cyan-500 data-[state=active]:text-cyan-400 data-[state=active]:shadow-glow-cyan">
+          Monitoreo de Fichas
+        </TabsTrigger>
+      </TabsList>
 
-      {/* Grid de Jugadores */}
-      <Card className="flex-grow bg-[#0a0806] border-[2px] border-[#3a2b1c] rounded shadow-[0_5px_15px_rgba(0,0,0,1)] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
-        <CardHeader className="border-b border-[#3a2b1c] bg-[#161411] relative z-10 pb-3">
-          <CardTitle className="font-serif text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] tracking-wider drop-shadow-md uppercase">Jugadores Conectados</CardTitle>
-        </CardHeader>
-        <CardContent className="relative z-10 p-0 pt-2">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-[#3a2b1c] hover:bg-transparent text-[#8b7355] font-serif uppercase tracking-widest text-xs">
-                <TableHead>Personaje</TableHead>
-                <TableHead className="w-[200px]">Vida (HP)</TableHead>
-                <TableHead>Ki / Zeon</TableHead>
-                <TableHead>Oro</TableHead>
-                <TableHead>Iniciativa</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {charList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500 italic">
-                    Esperando a que los jugadores se conecten...
-                  </TableCell>
+      <TabsContent value="combate" className="flex-grow flex flex-col gap-4 m-0 outline-none">
+        {/* Header de Combate */}
+        <div className="flex justify-between items-center bg-anima-panel/80 p-5 rounded-lg border border-anima-gold/30 shadow-glass-gold backdrop-blur-md">
+          <div>
+            <h1 className="text-3xl font-serif font-bold text-anima-gold tracking-wide flex items-center gap-3 drop-shadow-md">
+              Consola del GM 
+              <span className="bg-black/50 text-anima-goldglow px-3 py-1 rounded-md text-sm border border-anima-gold/50 shadow-glow-gold font-sans">
+                Asalto {combatState.round}
+              </span>
+            </h1>
+            <p className="text-gray-400 text-sm mt-1 font-serif">Campaña: La Sombra del Omega</p>
+          </div>
+          <div className="flex gap-3 flex-wrap relative z-10">
+            <CombatCalculator />
+            <AddEnemyModal spawnNpc={spawnNpc} campaignId={CAMPAIGN_ID} />
+            <Button onClick={requestInitiatives} className="h-10 px-4 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border border-[#5c4a35] text-[#c5a059] hover:from-[#3a2b1c] hover:to-[#161411] text-xs font-serif uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
+              {combatState.isRequestingInitiative ? 'Esperando Tiradas...' : 'Pedir Iniciativas'}
+            </Button>
+            <Button onClick={nextTurn} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-green-950 to-[#161411] hover:from-green-900 hover:to-[#161411] border border-green-900 text-green-200 uppercase tracking-widest text-xs shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10">
+              Siguiente Turno <ArrowRight className="w-4 h-4 text-green-400" />
+            </Button>
+            <Button onClick={nextRoundTick} className="h-10 px-4 flex items-center gap-2 btn-piedra-runica bg-gradient-to-b from-blue-950 to-[#161411] hover:from-blue-900 hover:to-[#161411] border border-blue-900 text-blue-200 shadow-[0_0_15px_rgba(37,99,235,0.3)] font-bold uppercase tracking-widest text-xs transition-all active:scale-95 duration-100 hover:scale-105 relative z-10">
+              Siguiente Asalto <FastForward className="w-4 h-4 text-blue-400" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Grid de Jugadores */}
+        <Card className="flex-grow bg-[#0a0806] border-[2px] border-[#3a2b1c] rounded shadow-[0_5px_15px_rgba(0,0,0,1)] relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
+          <CardHeader className="border-b border-[#3a2b1c] bg-[#161411] relative z-10 pb-3">
+            <CardTitle className="font-serif text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] tracking-wider drop-shadow-md uppercase">Jugadores Conectados</CardTitle>
+          </CardHeader>
+          <CardContent className="relative z-10 p-0 pt-2">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#3a2b1c] hover:bg-transparent text-[#8b7355] font-serif uppercase tracking-widest text-xs">
+                  <TableHead>Personaje</TableHead>
+                  <TableHead className="w-[200px]">Vida (HP)</TableHead>
+                  <TableHead>Ki / Zeon</TableHead>
+                  <TableHead>Oro</TableHead>
+                  <TableHead>Iniciativa</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ) : (
-                charList.map(char => (
-                  <GMCharacterRow 
-                    key={char.id} 
-                    char={char} 
-                    combatStateData={combatState.characterStates?.[char.id]}
-                    gmUpdateCharacter={gmUpdateCharacter} 
-                    applyEffect={applyEffect} 
-                    isActiveTurn={char.id === activeCharId} 
-                    removeNpc={removeNpc}
-                  />
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {charList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500 italic">
+                      Esperando a que los jugadores se conecten...
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  charList.map(char => (
+                    <GMCharacterRow 
+                      key={char.id} 
+                      char={char} 
+                      combatStateData={combatState.characterStates?.[char.id]}
+                      gmUpdateCharacter={gmUpdateCharacter} 
+                      applyEffect={applyEffect} 
+                      isActiveTurn={char.id === activeCharId} 
+                      removeNpc={removeNpc}
+                    />
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      <div className="mt-4 w-full">
-        <DiceRoller />
-      </div>
-    </div>
+        <div className="mt-4 w-full">
+          <DiceRoller />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="progression" className="flex-grow m-0 outline-none h-full overflow-hidden border border-slate-800 rounded bg-slate-950">
+        <GameMasterDashboard socket={socket} />
+      </TabsContent>
+    </Tabs>
   );
 }

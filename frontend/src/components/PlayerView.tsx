@@ -39,7 +39,7 @@ const ITEM_ICONS: Record<string, string> = {
 };
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
@@ -190,6 +190,30 @@ export function PlayerView() {
   const effectiveAttack = 50 + currentStats.ataque; // Assuming base 50
   const effectiveDodge = 50 + currentStats.esquiva;
   const effectiveBlock = 50 + currentStats.parada;
+
+  // Fase 10: Emitir Borrador al DJ
+  useEffect(() => {
+    if (!character) return;
+    
+    sendProgressionDraft({
+      playerId: character.id,
+      playerName: character.name,
+      clase: character.category,
+      spentPhysical: localSpend.physical,
+      spentMagic: localSpend.magic,
+      totalSpentDP: totalSpentThisLevel,
+      isOverLimit: currentCombatDP + totalPhysicalCost > maxCombatDP || projectedAvailableDP < 0
+    });
+  }, [
+    localSpend, 
+    totalSpentThisLevel, 
+    currentCombatDP, 
+    totalPhysicalCost, 
+    maxCombatDP, 
+    projectedAvailableDP, 
+    character, 
+    sendProgressionDraft
+  ]);
 
   return (
     <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
