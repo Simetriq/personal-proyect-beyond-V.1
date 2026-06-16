@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
+import { TurnTracker } from '../../../backend/src/types/combat';
+import { CombatLogEntry } from '../types/combatLog';
 
 export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';
 
@@ -90,7 +92,8 @@ export interface CombatStore {
   diceRolls: DiceRoll[];
   incomingAttack: { combatInstanceId: string; attackerName: string; attackRoll: number } | null;
   pendingCounterOpportunity: { attackerId: string; bonus: number; timeoutMs: number } | null;
-  criticalHitEvent: { defenderId: string; level: number; location: number; instantKill: boolean } | null;
+  criticalHitEvent: { defenderId: string; level: number; location: string; instantKill: boolean } | null;
+  fumbleEvent: { characterId: string; level: number; type: string } | null;
   weaponShatteredEvent: { characterId: string; weaponName: string } | null;
   progressionDrafts: Record<string, any>;
   
@@ -171,6 +174,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   incomingAttack: null,
   pendingCounterOpportunity: null,
   criticalHitEvent: null,
+  fumbleEvent: null,
   weaponShatteredEvent: null,
   progressionDrafts: {},
   logs: [],
@@ -186,6 +190,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   },
   
   clearCriticalHit: () => set({ criticalHitEvent: null }),
+  clearFumbleEvent: () => set({ fumbleEvent: null }),
   clearWeaponShattered: () => set({ weaponShatteredEvent: null }),
 
   connectToCampaign: (campaignId: string) => {
@@ -275,8 +280,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       set({ weaponShatteredEvent: data });
     });
 
-    socket.on('combat:critical_hit', (data: { defenderId: string, level: number, location: number, instantKill: boolean }) => {
+    socket.on('combat:critical_hit', (data) => {
       set({ criticalHitEvent: data });
+    });
+
+    socket.on('combat:fumble_occurred', (data) => {
+      set({ fumbleEvent: data });
     });
 
     socket.on('combat:bleeding_applied', (data: { defenderId: string }) => {

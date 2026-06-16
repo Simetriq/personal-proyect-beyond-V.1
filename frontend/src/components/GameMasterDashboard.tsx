@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useCombatStore } from '../store/combatStore';
+import { TurnOrderTracker } from './TurnOrderTracker';
+import { AlteredState, STATE_MODIFIERS } from '../types/combat';
 
 export const GameMasterDashboard: React.FC<{ socket: any }> = ({ socket }) => {
-  const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp } = useCombatStore();
+  const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp, turnTracker, campaignId } = useCombatStore();
   const [commandInput, setCommandInput] = useState('');
+  const combatants = turnTracker?.order || [];
 
   // Inicializar la escucha de sockets del GM al montar el componente
   // Note: Since Zustand state and actions can't easily access setupGMSocketListeners if not implemented there, 
@@ -15,18 +18,27 @@ export const GameMasterDashboard: React.FC<{ socket: any }> = ({ socket }) => {
   const handleCommandSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
-    
-    // Procesamiento básico de comandos rápidos en consola
-    const [command, targetId, amount] = commandInput.split(' ');
-    if (command === '/give_dp' && targetId && amount) {
-      socket.emit('gm:command_give_dp', { playerId: targetId, amount: parseInt(amount, 10) });
-    }
-    
+
+    socket.emit('combat:execute_gm_command', {
+      roomId: campaignId || 'camp-1',
+      commandString: commandInput
+    });
     setCommandInput('');
+  };
+
+  const handleApplyState = (characterId: string, state: AlteredState) => {
+    socket.emit('combat:toggle_character_state', {
+      roomId: campaignId || 'camp-1',
+      characterId,
+      state
+    });
   };
 
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-6 font-mono">
+      {/* Fase 13: Turn Tracker */}
+      <TurnOrderTracker roomId={useCombatStore.getState().campaignId || "camp-1"} isGM={true} />
+
       {/* Cabecera de la Pizarra */}
       <div className="border-b border-cyan-500/30 pb-4 mb-6 flex justify-between items-center">
         <div>
@@ -134,19 +146,74 @@ export const GameMasterDashboard: React.FC<{ socket: any }> = ({ socket }) => {
         )}
       </div>
 
-      {/* Consola de Comandos Rápidos al pie */}
-      <form onSubmit={handleCommandSubmit} className="mt-6 pt-4 border-t border-slate-900">
-        <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded border border-slate-800 focus-within:border-cyan-500/50 transition">
-          <span className="text-cyan-500 text-sm font-bold">&gt;_</span>
-          <input 
-            type="text" 
-            value={commandInput}
-            onChange={(e) => setCommandInput(e.target.value)}
-            placeholder="Consola GM (Ej: /give_dp id_jugador 50)" 
-            className="flex-1 bg-transparent border-none outline-none text-xs text-slate-300 placeholder-slate-600 font-mono"
-          />
+      {/* OMNIPOTENCE INTERFACE // CONTROL PANEL */}
+      <div className="bg-slate-950 border border-purple-900/40 rounded-lg p-4 font-mono shadow-2xl mt-6">
+        <div className="flex items-center justify-between border-b border-purple-950 pb-2 mb-4">
+          <span className="text-xs font-bold uppercase tracking-widest text-purple-400 animate-pulse">
+            🔮 OMNIPOTENCE INTERFACE // CONTROL PANEL
+          </span>
+          <span className="text-[9px] text-purple-600 font-mono">SYS_AUTH: GAME_MASTER</span>
         </div>
-      </form>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Grid de Monitoreo Rápido e Inyección de Estados */}
+          <div className="space-y-2">
+            <h3 className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Inyector Táctico de Estados</h3>
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-purple-900">
+              {combatants.map((combatant) => (
+                <div key={combatant.combatantId} className="bg-slate-900 border border-slate-800 p-2 rounded flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-bold text-slate-200 truncate max-w-[120px]">
+                      {combatant.name}
+                    </span>
+                    <span className="text-[9px] text-slate-500 bg-slate-950 px-1 rounded">
+                      ID: {combatant.combatantId.substring(0, 4)}...
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(Object.keys(STATE_MODIFIERS) as AlteredState[]).map((state) => (
+                      <button
+                        key={state}
+                        onClick={() => handleApplyState(combatant.combatantId, state)}
+                        className="text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-tighter bg-purple-950/40 hover:bg-purple-600 hover:text-slate-950 text-purple-400 border border-purple-900/30 rounded transition-all"
+                        title={`INI ${STATE_MODIFIERS[state].initMod} | ATK ${STATE_MODIFIERS[state].attackMod}`}
+                      >
+                        +{STATE_MODIFIERS[state].name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {combatants.length === 0 && (
+                <span className="text-xs italic text-slate-600">No hay combatientes en el tracker...</span>
+              )}
+            </div>
+          </div>
+
+          {/* Consola de Comandos CLI */}
+          <div className="flex flex-col">
+            <h3 className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-2">Consola de Macros CLI</h3>
+            <form onSubmit={handleCommandSubmit} className="flex-1 flex flex-col">
+              <div className="flex items-center bg-slate-900 rounded border border-purple-950 p-2 focus-within:border-purple-500/50 transition flex-1">
+                <span className="text-purple-500 font-bold px-2 text-sm">&gt;_</span>
+                <input
+                  type="text"
+                  value={commandInput}
+                  onChange={(e) => setCommandInput(e.target.value)}
+                  placeholder="/give_dp [id] 150  u  /damage [id] 40"
+                  className="bg-transparent text-xs text-purple-300 placeholder-purple-900/60 flex-1 outline-none font-mono py-1 w-full"
+                />
+                <button
+                  type="submit"
+                  className="bg-purple-900 hover:bg-purple-700 text-purple-100 text-[10px] uppercase font-bold px-4 py-2 rounded transition-colors ml-2"
+                >
+                  Exec
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

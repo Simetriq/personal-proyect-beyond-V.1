@@ -215,6 +215,86 @@ export function setupSocketEvents(io: Server) {
       }
     });
 
+    // Fase 15: Comandos de Consola GM
+    socket.on('combat:execute_gm_command', async ({ roomId, commandString }) => {
+      const parts = commandString.trim().split(' ');
+      const command = parts[0].toLowerCase();
+      
+      const emitSystemLog = (rId: string, msg: string) => {
+        io.to(rId).emit('combat:new_log', {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'system',
+          characterId: 'system',
+          characterName: 'Sistema',
+          message: msg,
+          isSecret: false
+        });
+      };
+
+      try {
+        switch (command) {
+          case '/give_dp': {
+            const [_, targetId, amountStr] = parts;
+            const amount = parseInt(amountStr, 10);
+            
+            if (targetId && !isNaN(amount)) {
+              const character = await prisma.character.update({
+                where: { id: targetId },
+                data: { totalDP: { increment: amount } }
+              });
+              emitSystemLog(roomId, `🎁 El GM ha otorgado ${amount} PD a ${character.name}.`);
+              // @ts-ignore
+              broadcastCharacterUpdate(roomId, character);
+            }
+            break;
+          }
+
+          case '/damage': {
+            const [_, targetId, amountStr] = parts;
+            const amount = parseInt(amountStr, 10);
+            
+            if (targetId && !isNaN(amount)) {
+              const character = await loadCharacter(roomId, targetId);
+              if (character) {
+                character.hp = Math.max(0, character.hp - amount);
+                await saveCharacter(character);
+                emitSystemLog(roomId, `💥 Una fuerza misteriosa inflige ${amount} de daño directo a ${character.name}.`);
+                broadcastCharacterUpdate(roomId, character);
+              }
+            }
+            break;
+          }
+
+          default:
+            socket.emit('combat:error', { message: 'Comando no reconocido o sintaxis inválida.' });
+        }
+      } catch (e) {
+        console.error('Error in execute_gm_command:', e);
+      }
+    });
+
+    // Fase 15: Inyector de Estados
+    socket.on('combat:toggle_character_state', async ({ roomId, characterId, state }) => {
+      try {
+        const character = await loadCharacter(roomId, characterId);
+        if (character) {
+          if (!character.activeEffects) character.activeEffects = [];
+          
+          const existingIdx = character.activeEffects.findIndex((e: any) => e.type === state);
+          if (existingIdx >= 0) {
+            character.activeEffects.splice(existingIdx, 1);
+          } else {
+            character.activeEffects.push({ type: state, duration: -1 });
+          }
+          await saveCharacter(character);
+          broadcastCharacterUpdate(roomId, character);
+        }
+      } catch (e) {
+        console.error('Error in toggle_character_state:', e);
+      }
+    });
+
     // --- Fase 10 (Subfase C): Ciclo de Agonía y Desangramiento ---
     socket.on('combat:tick_minute', async (campaignId: string) => {
       try {
@@ -554,11 +634,16 @@ export function setupSocketEvents(io: Server) {
           }
 
           if (result.isCritical) {
+            let stateName = 'critical_torso';
+            if (result.criticalLocation === 'Cabeza') stateName = 'critical_head';
+            else if (result.criticalLocation === 'Brazo') stateName = 'critical_arm';
+            else if (result.criticalLocation === 'Pierna') stateName = 'critical_leg';
+
             let instantKill = false;
-            if (result.criticalLocation! >= 10 && result.criticalLocation! <= 29 && result.criticalLevel! >= 50) {
+            if (result.criticalLocation === 'Cabeza' && result.criticalLevel! >= 50) {
               instantKill = true;
               defender.currentHp = 0; 
-              result.message += " ¡GOLPE FATAL (Amputación)!";
+              result.message += " ¡GOLPE FATAL (Amputación/Trauma Masivo)!";
             }
 
             let ignoreCritical = false;
@@ -566,12 +651,10 @@ export function setupSocketEvents(io: Server) {
               ignoreCritical = true;
               result.message += ` [Resistir el Dolor: El defensor ignora el penalizador de crítico]`;
             } else {
+              if (!defender.activeEffects) defender.activeEffects = [];
               defender.activeEffects.push({
-                id: `crit_${Date.now()}`,
-                name: `Herida Crítica (Nvl ${result.criticalLevel})`,
-                type: 'PENALIZADOR',
-                value: result.criticalLevel || 10,
-                durationRounds: 5
+                type: stateName,
+                duration: -1
               });
             }
             
@@ -592,6 +675,24 @@ export function setupSocketEvents(io: Server) {
           broadcastCharacterUpdate(campaignId, defender);
         }
 
+        // FASE 16: Aplicar Pifias
+        if (result.isFumble && result.fumbleTarget === 'attacker') {
+          if (!attacker.activeEffects) attacker.activeEffects = [];
+          const fumbleState = result.fumbleLevel! >= 40 ? 'fumble_major' : 'fumble_minor';
+          attacker.activeEffects.push({
+            type: fumbleState,
+            duration: 1 // Solo penaliza 1 turno típicamente, pero dejamos esto base
+          });
+          await saveCharacter(attacker);
+          broadcastCharacterUpdate(campaignId, attacker);
+          
+          io.to(campaignId).emit('combat:fumble_occurred', {
+            characterId: attackerId,
+            level: result.fumbleLevel,
+            type: fumbleState
+          });
+        }
+
         // Emitir a toda la mesa la resolución
         io.to(campaignId).emit('attack_resolved', {
           attackerId,
@@ -599,22 +700,21 @@ export function setupSocketEvents(io: Server) {
           result
         });
 
-        // Fase 12: Battle Log
+        // Fase 12 y 14: Battle Log
         const logEntry: CombatLogEntry = {
           id: `log_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          timestamp: Date.now(),
           type: result.damage > 0 ? (result.isCritical ? 'critical' : 'attack_hit') : 'attack_miss',
-          attackerName: attacker.name,
-          targetName: defender.name,
-          payload: {
-            attackTotal: finalAttackRoll,
+          characterId: attackerId,
+          characterName: attacker.name,
+          message: `${attacker.name} atacó a ${defender.name}. ${result.damage > 0 ? `¡Impacto! Causando ${result.damage} daños.` : 'El ataque fue completamente evadido o mitigado.'} ${result.isCritical ? `⚠️ CRÍTICO: Nvl ${result.criticalLevel} (Loc: ${result.criticalLocation})` : ''}`,
+          isSecret: false,
+          mathDetails: {
+            roll: finalAttackRoll, // Aproximación, idealmente deberías pasar el roll base de los dados si lo tuvieras separado
+            modifier: 0,
+            total: finalAttackRoll,
             defenseTotal: finalDefenseRoll,
-            defenseType: data.defenseType,
-            damageDealt: Math.floor((baseDamage * Math.max(10, Math.floor((finalAttackRoll - finalDefenseRoll - (result.armorAbsorbed || 0)) / 10) * 10)) / 100), // Approximate base damage dealt before mitigations or just raw calculation if needed, using result.damage
-            armorMitigation: result.armorAbsorbed || 0,
-            finalHpMinus: result.damage,
-            isCritical: result.isCritical || false,
-            criticalEffect: result.isCritical ? `Crítico Nvl ${result.criticalLevel} (Loc: ${result.criticalLocation})` : undefined
+            damageFinal: result.damage
           }
         };
         
@@ -675,13 +775,12 @@ export function setupSocketEvents(io: Server) {
       const emitSystemLog = (rId: string, msg: string) => {
         io.to(rId).emit('combat:new_log', {
           id: crypto.randomUUID(),
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          type: 'attack_miss', // Reusing this for system message format
-          attackerName: 'Sistema',
-          targetName: 'Mesa',
-          payload: {
-            attackTotal: 0, defenseTotal: 0, defenseType: 'DODGE', damageDealt: 0, armorMitigation: 0, finalHpMinus: 0, isCritical: true, criticalEffect: msg
-          }
+          timestamp: Date.now(),
+          type: 'system',
+          characterId: 'system',
+          characterName: 'Sistema',
+          message: msg,
+          isSecret: false
         });
       };
 
@@ -702,6 +801,22 @@ export function setupSocketEvents(io: Server) {
       }
 
       io.to(roomId).emit('combat:turn_order_updated', tracker);
+    });
+
+    // Fase 14: Acción Secreta del DJ
+    socket.on('combat:submit_secret_log', ({ roomId, logEntry }) => {
+      // 1. Clonamos el log para los jugadores y borramos la matemática, anonimizando el mensaje
+      const publicLog: CombatLogEntry = {
+        ...logEntry,
+        message: `🤫 El Game Master realiza una acción en las sombras...`,
+        mathDetails: undefined
+      };
+
+      // Emitir público a la sala (incluye a jugadores comunes)
+      socket.to(roomId).emit('combat:new_log', publicLog);
+      
+      // Emitir el log real con matemática al DJ
+      socket.emit('combat:new_log', logEntry);
     });
 
     // Old synchronous fallback or to be deprecated

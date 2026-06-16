@@ -21,6 +21,7 @@ import { PhysicalLevelUpSection } from "./PhysicalLevelUpSection";
 import { DefenseReactionModal } from './DefenseReactionModal';
 import { CombatTargetPanel, Combatant } from './CombatTargetPanel';
 import { BattleLogPanel } from './BattleLogPanel';
+import { TurnOrderTracker } from './TurnOrderTracker';
 import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
 import { CLASSES_CONFIG } from "../lib/classesConfig";
 
@@ -46,7 +47,7 @@ const ITEM_ICONS: Record<string, string> = {
 };
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, fumbleEvent, clearFumbleEvent, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
@@ -241,9 +242,13 @@ export function PlayerView() {
   };
 
   return (
-    <div className="flex h-full text-white relative">
-      {/* Columna Principal (Izquierda + Centro) */}
-      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-y-auto">
+    <div className="flex flex-col h-full text-white relative">
+      {/* Fase 13: Turn Tracker */}
+      <TurnOrderTracker roomId={CAMPAIGN_ID} isGM={false} />
+      
+      <div className="flex flex-1 h-full overflow-hidden">
+        {/* Columna Principal (Izquierda + Centro) */}
+        <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-y-auto">
         {/* Fase 11: Modal de Defensa */}
       {incomingAttack && (
         <DefenseReactionModal
@@ -1031,15 +1036,10 @@ export function PlayerView() {
               </div>
               
               <div className="bg-gray-800/50 p-4 rounded text-center border border-gray-700">
-                <div className="text-sm text-gray-400 mb-1">Localización (1d100)</div>
-                <div className="text-2xl font-bold text-gray-200">{criticalHitEvent.location}</div>
+                <div className="text-sm text-gray-400 mb-1">Localización</div>
+                <div className="text-2xl font-bold text-gray-200 uppercase">{criticalHitEvent.location}</div>
                 <div className="text-xs text-gray-500 mt-2">
-                  {criticalHitEvent.location >= 10 && criticalHitEvent.location <= 19 ? 'Cabeza' :
-                   criticalHitEvent.location >= 20 && criticalHitEvent.location <= 29 ? 'Pecho/Corazón' :
-                   criticalHitEvent.location >= 30 && criticalHitEvent.location <= 39 ? 'Estómago' :
-                   criticalHitEvent.location >= 40 && criticalHitEvent.location <= 49 ? 'Costado/Abdomen' :
-                   criticalHitEvent.location >= 50 && criticalHitEvent.location <= 69 ? 'Brazo' :
-                   'Pierna'}
+                  Se ha aplicado el modificador de estado negativo.
                 </div>
               </div>
               
@@ -1061,6 +1061,35 @@ export function PlayerView() {
                 onClick={clearCriticalHit}
               >
                 Aceptar Destino
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE PIFIA */}
+      {fumbleEvent && fumbleEvent.characterId === myCharacterId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-900 border-2 border-red-500 rounded-lg p-6 max-w-md w-full shadow-[0_0_50px_rgba(239,68,68,0.3)] transform scale-100 animate-in fade-in zoom-in duration-300">
+            <h2 className="text-3xl font-cinzel font-bold text-red-500 mb-4 text-center">¡PIFIA!</h2>
+            
+            <div className="space-y-4">
+              <div className="bg-red-950/50 p-4 rounded text-center border border-red-900/50">
+                <div className="text-sm text-gray-400 mb-1">Nivel de Pifia</div>
+                <div className="text-4xl font-bold text-red-400">{fumbleEvent.level}</div>
+              </div>
+              
+              <div className="p-3 bg-red-900 text-white font-bold text-center rounded border border-red-500">
+                Has sufrido {fumbleEvent.type === 'fumble_major' ? 'un desastre táctico' : 'un tropiezo grave'}.
+                Se han aplicado penalizadores automáticos.
+              </div>
+              
+              <Button 
+                variant="destructive" 
+                className="w-full mt-4"
+                onClick={clearFumbleEvent}
+              >
+                Aceptar Error
               </Button>
             </div>
           </div>
@@ -1105,8 +1134,9 @@ export function PlayerView() {
           onDeclareAttack={handleDeclareAttack} 
         />
         <div className="p-4 border-t border-slate-800 flex-1">
-          <BattleLogPanel logs={logs} />
+          <BattleLogPanel logs={logs} activeCharacterId={character.id} isGM={false} />
         </div>
+      </div>
       </div>
     </div>
   );

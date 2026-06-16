@@ -4,7 +4,10 @@ export interface CombatResolutionResult {
   message: string;
   isCritical?: boolean;
   criticalLevel?: number;
-  criticalLocation?: number;
+  criticalLocation?: string;
+  isFumble?: boolean;
+  fumbleLevel?: number;
+  fumbleTarget?: 'attacker' | 'defender';
   weaponClash?: {
     attackerWeaponWon: boolean;
     broken: boolean;
@@ -20,6 +23,8 @@ export interface CombatModifiers {
   coverage?: 'PARTIAL' | 'MILITARY' | 'TOTAL';
   burnedFatigueAttack?: number;  // 1 = +15, 2 = +30
   burnedFatigueDefense?: number; // 1 = +15, 2 = +30
+  attackerRawRoll?: number;
+  defenderRawRoll?: number;
 }
 
 export function resolveAttack(
@@ -37,6 +42,23 @@ export function resolveAttack(
   let finalAttackRoll = attackRoll;
   let finalDefenseRoll = defenseRoll;
   let disarmAttempt = false;
+
+  // Fase 16: Pifias
+  if (modifiers?.attackerRawRoll && modifiers.attackerRawRoll <= 3) {
+    return {
+      damage: 0,
+      counterAttackBonus: 0,
+      message: `¡PIFIA del Atacante! (Dado natural: ${modifiers.attackerRawRoll}). Tropieza y pierde la iniciativa.`,
+      isFumble: true,
+      fumbleLevel: Math.floor(Math.random() * 50) + 10,
+      fumbleTarget: 'attacker'
+    };
+  }
+
+  if (modifiers?.defenderRawRoll && modifiers.defenderRawRoll <= 3) {
+    // Si el defensor pifia, sufre penalización en la defensa
+    finalDefenseRoll -= 50; 
+  }
 
   if (modifiers) {
     if (modifiers.isAreaAttack) finalAttackRoll -= 50;
@@ -125,20 +147,26 @@ export function resolveAttack(
 
   const finalDamage = Math.floor((baseDamage * percentage) / 100);
 
-  // Fase 6.1: Crítico Automático
+  // Fase 6.1 y 16: Crítico Automático
   let isCritical = false;
   let criticalLevel = 0;
-  let criticalLocation = 0;
+  let criticalLocationStr = '';
   
   if (finalDamage >= (defenderHp / 2) && finalDamage > 0) {
     isCritical = true;
-    criticalLevel = finalDamage;
-    criticalLocation = Math.floor(Math.random() * 100) + 1;
+    criticalLevel = Math.max(1, finalDamage - (ta * 10)); // Nivel = Daño - (Armadura * 10)
+    
+    // Tabla D100 de Localización
+    const locRoll = Math.floor(Math.random() * 100) + 1;
+    if (locRoll <= 10) criticalLocationStr = 'Cabeza';
+    else if (locRoll <= 50) criticalLocationStr = 'Torso';
+    else if (locRoll <= 70) criticalLocationStr = 'Brazo';
+    else criticalLocationStr = 'Pierna';
   }
 
   let message = `¡Impacto! (Dif: ${diff}, Net: ${netDiff}). Se aplica ${percentage}% del Daño Base. Daño final: ${finalDamage}`;
   if (isCritical) {
-    message += ` ¡IMPACTO CRÍTICO! (Nivel ${criticalLevel}, Loc: ${criticalLocation})`;
+    message += ` ¡IMPACTO CRÍTICO! (Nivel ${criticalLevel}, Loc: ${criticalLocationStr})`;
   }
 
   return {
@@ -147,7 +175,7 @@ export function resolveAttack(
     message,
     isCritical,
     criticalLevel,
-    criticalLocation,
+    criticalLocation: criticalLocationStr,
     armorAbsorbed: absorb
   };
 }
