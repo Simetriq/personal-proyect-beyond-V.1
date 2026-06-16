@@ -56,6 +56,11 @@ export interface Character {
   hasInhumanity?: boolean;
   hasZen?: boolean;
   isDead?: boolean;
+  // Fase 9: Progresión
+  totalDP?: number;
+  spentDP?: number;
+  dpDistribution?: string;
+  category?: string;
 }
 
 export interface CharacterCombatState {
@@ -83,6 +88,7 @@ export interface CombatStore {
   myCharacterId: string | null;
   combatState: CombatState;
   diceRolls: DiceRoll[];
+  incomingAttack: { combatInstanceId: string; attackerName: string; attackRoll: number } | null;
   pendingCounterOpportunity: { attackerId: string; bonus: number; timeoutMs: number } | null;
   criticalHitEvent: { defenderId: string; level: number; location: number; instantKill: boolean } | null;
   weaponShatteredEvent: { characterId: string; weaponName: string } | null;
@@ -129,6 +135,20 @@ export interface CombatStore {
   sendProgressionDraft: (payload: any) => void;
   approveLevelUp: (playerId: string) => void;
   rejectLevelUp: (playerId: string) => void;
+
+  // Fase 11
+  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any) => void;
+  submitDefense: (combatInstanceId: string, defenseType: 'BLOCK' | 'DODGE', defenseRoll: number) => void;
+  clearIncomingAttack: () => void;
+
+  // Fase 12
+  logs: CombatLogEntry[];
+  addLog: (log: CombatLogEntry) => void;
+  clearLogs: () => void;
+
+  // Fase 13
+  turnTracker: TurnTracker | null;
+  setTurnTracker: (tracker: TurnTracker) => void;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
@@ -148,10 +168,17 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     characterStates: {}
   },
   diceRolls: [],
+  incomingAttack: null,
   pendingCounterOpportunity: null,
   criticalHitEvent: null,
   weaponShatteredEvent: null,
   progressionDrafts: {},
+  logs: [],
+  turnTracker: null,
+
+  addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
+  clearLogs: () => set({ logs: [] }),
+  setTurnTracker: (tracker) => set({ turnTracker: tracker }),
 
   setMyCharacterId: (id: string) => {
     localStorage.setItem('anima_character_id', id);
@@ -284,6 +311,52 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         delete newDrafts[playerId];
         return { progressionDrafts: newDrafts };
       });
+    });
+
+    socket.on('player:dp_received', (data: { amount: number; newTotalDP: number, availableDP: number }) => {
+      // Si el evento nos llega, actualizamos el character en el store
+      set((state) => {
+        const myCharId = state.myCharacterId;
+        if (!myCharId || !state.characters[myCharId]) return state;
+        
+        // El servidor también enviará un character_updated si está implementado el broadcsat general,
+        // pero podemos actualizarlo en caliente acá:
+        console.log(`[VTT] Has recibido ${data.amount} PD del Director de Juego.`);
+        
+        return {
+          characters: {
+            ...state.characters,
+            [myCharId]: {
+              ...state.characters[myCharId],
+              // @ts-ignore - totalDP might not be explicitly typed in Character interface but it's used
+              totalDP: data.newTotalDP
+            }
+          }
+        };
+      });
+    });
+
+    // Fase 11: Combate Asíncrono
+    socket.on('combat:defend_requested', (data: { combatInstanceId: string; attackerName: string; attackRoll: number }) => {
+      set({ incomingAttack: data });
+    });
+
+    socket.on('attack_resolved', () => {
+      set({ incomingAttack: null });
+    });
+
+    // Fase 12: Logs de Combate
+    socket.on('combat:new_log', (log: CombatLogEntry) => {
+      get().addLog(log);
+    });
+
+    // Fase 13: Trackeo de Turnos
+    socket.on('combat:turn_order_updated', (tracker: TurnTracker) => {
+      get().setTurnTracker(tracker);
+    });
+
+    socket.on('combat:new_round_started', (tracker: TurnTracker) => {
+      get().setTurnTracker(tracker);
     });
 
     set({ socket, campaignId });
@@ -533,5 +606,30 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     if (socket) {
       socket.emit('gm:reject_level_up', playerId);
     }
-  }
+  },
+
+  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any) => {
+    const { socket, campaignId, myCharacterId } = get();
+    if (socket && campaignId && myCharacterId) {
+      socket.emit('combat:declare_attack', {
+        campaignId,
+        attackerId: myCharacterId,
+        targetId,
+        attackRoll,
+        baseDamage,
+        damageType,
+        modifiers
+      });
+    }
+  },
+
+  submitDefense: (combatInstanceId: string, defenseType: 'BLOCK' | 'DODGE', defenseRoll: number) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('combat:submit_defense', { combatInstanceId, defenseType, defenseRoll });
+      set({ incomingAttack: null });
+    }
+  },
+
+  clearIncomingAttack: () => set({ incomingAttack: null })
 }));

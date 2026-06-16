@@ -9,6 +9,7 @@ export interface CombatResolutionResult {
     attackerWeaponWon: boolean;
     broken: boolean;
   };
+  armorAbsorbed?: number;
 }
 
 export interface CombatModifiers {
@@ -92,7 +93,8 @@ export function resolveAttack(
       damage: 0,
       counterAttackBonus,
       message,
-      weaponClash
+      weaponClash,
+      armorAbsorbed: 0
     };
   }
 
@@ -101,7 +103,8 @@ export function resolveAttack(
     return {
       damage: 0,
       counterAttackBonus: 0,
-      message: `¡Desarme exitoso! (Dif: ${diff}). El defensor suelta su arma.`
+      message: `¡Desarme exitoso! (Dif: ${diff}). El defensor suelta su arma.`,
+      armorAbsorbed: 0
     };
   }
 
@@ -113,6 +116,7 @@ export function resolveAttack(
       damage: 0,
       counterAttackBonus: 0,
       message: `El ataque impactó (Dif: ${diff}), pero la armadura absorbió todo el daño.`,
+      armorAbsorbed: absorb
     };
   }
 
@@ -143,6 +147,7 @@ export function resolveAttack(
     message,
     isCritical,
     criticalLevel,
-    criticalLocation
+    criticalLocation,
+    armorAbsorbed: absorb
   };
 }

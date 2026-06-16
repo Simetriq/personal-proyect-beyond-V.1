@@ -11,9 +11,16 @@ import { CreateCharacterForm } from "./CreateCharacterForm";
 import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 import { KiTree } from "./KiTree";
 import { KiAccumulator } from "./ui/KiAccumulator";
-import { DiceRoller } from "./ui/DiceRoller";
+import { PlayerInventory } from './PlayerInventory';
+import { PlayerSpells } from './PlayerSpells';
+import { DiceRoller } from './ui/DiceRoller';
+import { ActiveEffectsList } from './ActiveEffectsList';
+import { DamageModal } from './DamageModal';
 import { MagicLevelUpSection } from "./MagicLevelUpSection";
 import { PhysicalLevelUpSection } from "./PhysicalLevelUpSection";
+import { DefenseReactionModal } from './DefenseReactionModal';
+import { CombatTargetPanel, Combatant } from './CombatTargetPanel';
+import { BattleLogPanel } from './BattleLogPanel';
 import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
 import { CLASSES_CONFIG } from "../lib/classesConfig";
 
@@ -39,7 +46,7 @@ const ITEM_ICONS: Record<string, string> = {
 };
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
@@ -215,8 +222,37 @@ export function PlayerView() {
     sendProgressionDraft
   ]);
 
+  // Construir la lista de combatientes para el Radar
+  const combatants: Combatant[] = Object.values(characters).map(c => ({
+    id: c.id,
+    name: c.name,
+    isNPC: c.category === 'NPC' || c.category === 'Enemigo' || c.hp === undefined, // Simulación rápida de flag NPC
+    currentHp: combatState.characterStates[c.id]?.hp ?? c.hp ?? c.currentHp,
+    maxHp: c.max_hp ?? c.hp ?? c.maxHp ?? 100
+  }));
+
+  const handleDeclareAttack = (targetId: string, totalAttack: number) => {
+    // Tomamos el daño base del arma equipada o puño
+    const equippedWeapon = character.inventoryItems?.find(i => i.equipped && i.item.type === 'WEAPON')?.item;
+    const baseDamage = equippedWeapon?.baseDamage || 10;
+    const damageType = equippedWeapon?.modifiers ? Object.keys(JSON.parse(equippedWeapon.modifiers))[0] : 'CON';
+
+    declareAttack(targetId, totalAttack, baseDamage, damageType, {});
+  };
+
   return (
-    <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
+    <div className="flex h-full text-white relative">
+      {/* Columna Principal (Izquierda + Centro) */}
+      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-y-auto">
+        {/* Fase 11: Modal de Defensa */}
+      {incomingAttack && (
+        <DefenseReactionModal
+          combatInstanceId={incomingAttack.combatInstanceId}
+          attackerName={incomingAttack.attackerName}
+          attackRoll={incomingAttack.attackRoll}
+          onDefenseSubmit={(type, roll) => submitDefense(incomingAttack.combatInstanceId, type, roll)}
+        />
+      )}
       
       {/* Banner de Turno Activo */}
       {isActiveTurn && !isUnconscious && (
@@ -1057,7 +1093,21 @@ export function PlayerView() {
           </div>
         </div>
       )}
+      )}
 
+      </div>
+      
+      {/* Fase 11 y 12: Radar de Objetivos y Log (Panel Derecho) */}
+      <div className="w-80 border-l border-[#3a2b1c] bg-[#0a0806] shrink-0 flex flex-col h-full">
+        <CombatTargetPanel 
+          combatants={combatants} 
+          currentUserId={character.id} 
+          onDeclareAttack={handleDeclareAttack} 
+        />
+        <div className="p-4 border-t border-slate-800 flex-1">
+          <BattleLogPanel logs={logs} />
+        </div>
+      </div>
     </div>
   );
 }

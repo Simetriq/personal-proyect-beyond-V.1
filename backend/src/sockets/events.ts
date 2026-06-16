@@ -8,12 +8,18 @@ import { resolveAttack } from '../engine/combatResolution';
 import { roll1d100 } from '../engine/dice';
 import { isAgony, evaluateDeathState } from '../engine/health';
 import { tickBleeding } from '../engine/bleeding';
+import { CombatLogEntry } from '../types/combatLog';
 
 const prisma = new PrismaClient({ log: ['info'] });
 
 import { getCombatTracker, CombatantInitiativeInfo } from '../engine/combatTracker';
+import { TurnTracker } from '../types/combat';
+import crypto from 'crypto';
+
 const npcManagers = new Map<string, Map<string, any>>();
 const activeProgressionDrafts: Record<string, any> = {};
+const activeCombats: Record<string, any> = {};
+const activeTurnTrackers: Record<string, TurnTracker> = {};
 function getCampaignNpcs(campaignId: string) {
   if (!npcManagers.has(campaignId)) npcManagers.set(campaignId, new Map());
   return npcManagers.get(campaignId)!;
@@ -154,6 +160,59 @@ export function setupSocketEvents(io: Server) {
       }
       io.to(playerId).emit('player:progression_rejected');
       io.to('gm_room').emit('gm:remove_player_draft', playerId);
+    });
+
+    // Escucha del comando rápido para otorgar Puntos de Desarrollo (PD)
+    socket.on('gm:command_give_dp', async (payload: { playerId: string; amount: number }) => {
+      const { playerId, amount } = payload;
+
+      // 1. Sanitización rápida de los datos de entrada
+      if (!playerId || isNaN(amount) || amount <= 0) {
+        socket.emit('gm:console_error', 'Error: Datos inválidos. Uso: /give_dp [id] [cantidad]');
+        return;
+      }
+
+      try {
+        // 2. Transacción directa en la base de datos con Prisma
+        // Usamos totalDP de acuerdo al esquema
+        const characterActualizado = await prisma.character.update({
+          where: { id: playerId },
+          data: {
+            totalDP: {
+              increment: amount
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            totalDP: true,
+            spentDP: true
+          }
+        });
+
+        // 3. Notificar al jugador afectado en tiempo real (si está conectado)
+        const availableDP = characterActualizado.totalDP - characterActualizado.spentDP;
+        io.to(playerId).emit('player:dp_received', {
+          amount,
+          newTotalDP: characterActualizado.totalDP,
+          availableDP
+        });
+
+        // 4. Feedback de éxito para la consola del Dashboard del GM
+        socket.emit('gm:console_success', `Inyectados ${amount} PD a ${characterActualizado.name} con éxito.`);
+
+        // Actualizamos al resto también
+        const repo = new CharacterRepository(prisma);
+        const fullChar = await repo.findById(playerId);
+        if (fullChar) {
+          // Si sabemos el campaignId, emitimos character_updated
+          // asumiendo que el char tiene campaignId
+        }
+
+      } catch (error) {
+        console.error('Error crítico al procesar gm:command_give_dp con Prisma:', error);
+        socket.emit('gm:console_error', 'Error interno del servidor al actualizar los PD en Prisma.');
+      }
     });
 
     // --- Fase 10 (Subfase C): Ciclo de Agonía y Desangramiento ---
@@ -395,6 +454,257 @@ export function setupSocketEvents(io: Server) {
       }
     });
 
+    // Phase 11: Combate Asíncrono
+    socket.on('combat:declare_attack', async (data: { campaignId: string, attackerId: string, targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any, weaponCard?: any }) => {
+      try {
+        const attacker = await loadCharacter(data.campaignId, data.attackerId);
+        if (!attacker) return;
+        
+        const combatInstanceId = `combat_${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
+        
+        activeCombats[combatInstanceId] = {
+          ...data,
+          attackerName: attacker.name
+        };
+
+        io.to(data.targetId).emit('combat:defend_requested', {
+          combatInstanceId,
+          attackerName: attacker.name,
+          attackRoll: data.attackRoll
+        });
+
+        io.to('gm_room').emit('gm:console_success', `${attacker.name} está atacando a ID:${data.targetId} (Tirada: ${data.attackRoll})`);
+      } catch (e) {
+        console.error('[Socket] Error declaring attack:', e);
+      }
+    });
+
+    socket.on('combat:submit_defense', async (data: { combatInstanceId: string, defenseType: 'BLOCK' | 'DODGE', defenseRoll: number }) => {
+      try {
+        const combat = activeCombats[data.combatInstanceId];
+        if (!combat) return;
+
+        const { campaignId, attackerId, targetId, attackRoll, baseDamage, damageType, modifiers } = combat;
+        delete activeCombats[data.combatInstanceId];
+
+        const attacker = await loadCharacter(campaignId, attackerId);
+        const defender = await loadCharacter(campaignId, targetId);
+        if (!attacker || !defender) return;
+
+        // FASE 6.2: Aplicar penalizadores físicos (Agotamiento / Sangrado)
+        const attackerPenalty = attacker.getPhysicalPenalty();
+        const defenderPenalty = defender.getPhysicalPenalty();
+        
+        let finalAttackRoll = attackRoll + attackerPenalty;
+        let finalDefenseRoll = data.defenseRoll + defenderPenalty;
+
+        // FASE 6.4: Penalizador Defensivo por Canalización Mágica
+        if (defender.isChanneling) {
+          finalDefenseRoll -= 20; 
+        }
+
+        // FASE 6.5: Acrobacias
+        let acrobaticsBonus = 0;
+        if (attacker.currentInitiative !== null && defender.currentInitiative !== null) {
+          if (attacker.currentInitiative - defender.currentInitiative > 50 && (attacker.secondarySkills?.acrobacias || 0) >= 50) {
+            acrobaticsBonus = 10;
+            finalAttackRoll += acrobaticsBonus;
+          }
+        }
+
+        const ta = defender.resistances.getResistanceByType(damageType);
+        
+        // FASE 6.3: Choque de Armas
+        const attackerWeapon = attacker.getEquippedWeapon();
+        const defenderWeapon = defender.getEquippedWeapon();
+        const attackerWeaponROT = attackerWeapon ? (attackerWeapon.breakage || 0) : 0;
+        const defenderWeaponENT = defenderWeapon ? (defenderWeapon.fortitude || 0) : 0;
+
+        const result = resolveAttack(
+          finalAttackRoll, 
+          finalDefenseRoll, 
+          baseDamage, 
+          ta,
+          defender.currentHp,
+          data.defenseType,
+          attackerWeaponROT,
+          defenderWeaponENT,
+          modifiers
+        );
+        
+        if (result.weaponClash && result.weaponClash.broken && defenderWeapon) {
+          defenderWeapon.isBroken = true;
+          defender.unequipItem(defenderWeapon.id);
+          io.to(campaignId).emit('combat:weapon_shattered', {
+            characterId: targetId,
+            weaponName: defenderWeapon.name
+          });
+        }
+        
+        if (acrobaticsBonus > 0) result.message += ` [Acrobacias: +${acrobaticsBonus} Ataque]`;
+        if (attackerPenalty < 0) result.message += ` [Atacante Penalizado: ${attackerPenalty}]`;
+        if (defenderPenalty < 0) result.message += ` [Defensor Penalizado: ${defenderPenalty}]`;
+        
+        const tracker = getCombatTracker(campaignId);
+
+        if (result.damage > 0) {
+          defender.applyResolvedDamage(result.damage);
+          if (tracker.characterStates.has(targetId)) {
+            tracker.characterStates.get(targetId)!.isDefensive = true;
+          }
+
+          if (result.isCritical) {
+            let instantKill = false;
+            if (result.criticalLocation! >= 10 && result.criticalLocation! <= 29 && result.criticalLevel! >= 50) {
+              instantKill = true;
+              defender.currentHp = 0; 
+              result.message += " ¡GOLPE FATAL (Amputación)!";
+            }
+
+            let ignoreCritical = false;
+            if ((defender.secondarySkills?.resistir_dolor || 0) >= 50) {
+              ignoreCritical = true;
+              result.message += ` [Resistir el Dolor: El defensor ignora el penalizador de crítico]`;
+            } else {
+              defender.activeEffects.push({
+                id: `crit_${Date.now()}`,
+                name: `Herida Crítica (Nvl ${result.criticalLevel})`,
+                type: 'PENALIZADOR',
+                value: result.criticalLevel || 10,
+                durationRounds: 5
+              });
+            }
+            
+            if (!instantKill && defender.currentHp > 0) {
+              defender.isBleeding = true;
+              io.to(campaignId).emit('combat:bleeding_applied', { defenderId: targetId });
+            }
+            
+            io.to(campaignId).emit('combat:critical_hit', {
+              defenderId: targetId,
+              level: result.criticalLevel,
+              location: result.criticalLocation,
+              instantKill
+            });
+          }
+
+          await saveCharacter(defender);
+          broadcastCharacterUpdate(campaignId, defender);
+        }
+
+        // Emitir a toda la mesa la resolución
+        io.to(campaignId).emit('attack_resolved', {
+          attackerId,
+          defenderId: targetId,
+          result
+        });
+
+        // Fase 12: Battle Log
+        const logEntry: CombatLogEntry = {
+          id: `log_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          type: result.damage > 0 ? (result.isCritical ? 'critical' : 'attack_hit') : 'attack_miss',
+          attackerName: attacker.name,
+          targetName: defender.name,
+          payload: {
+            attackTotal: finalAttackRoll,
+            defenseTotal: finalDefenseRoll,
+            defenseType: data.defenseType,
+            damageDealt: Math.floor((baseDamage * Math.max(10, Math.floor((finalAttackRoll - finalDefenseRoll - (result.armorAbsorbed || 0)) / 10) * 10)) / 100), // Approximate base damage dealt before mitigations or just raw calculation if needed, using result.damage
+            armorMitigation: result.armorAbsorbed || 0,
+            finalHpMinus: result.damage,
+            isCritical: result.isCritical || false,
+            criticalEffect: result.isCritical ? `Crítico Nvl ${result.criticalLevel} (Loc: ${result.criticalLocation})` : undefined
+          }
+        };
+        
+        io.to(campaignId).emit('combat:new_log', logEntry);
+
+        // FASE 4: Oportunidad de Contraataque
+        if (result.counterAttackBonus > 0) {
+          tracker.addPendingCounter(targetId, () => {
+            io.to(campaignId).emit('combat:counter_expired', { defenderId: targetId });
+          });
+          io.to(campaignId).emit('combat:counter_opportunity', {
+            defenderId: targetId,
+            attackerId,
+            bonus: result.counterAttackBonus,
+            timeoutMs: 15000
+          });
+        }
+      } catch (e) {
+        console.error('[Socket] Error in combat:submit_defense:', e);
+      }
+    });
+
+    // Fase 13: Sockets de Control de Ronda
+    socket.on('combat:submit_initiative_v2', ({ roomId, combatantId, name, roll, baseModifier, isNPC, accumulatingTurns }) => {
+      if (!activeTurnTrackers[roomId]) {
+        activeTurnTrackers[roomId] = { isActive: true, currentRound: 1, currentTurnIndex: 0, order: [] };
+      }
+
+      const tracker = activeTurnTrackers[roomId];
+      const initiativeTotal = roll + baseModifier;
+
+      // Evitar duplicados
+      tracker.order = tracker.order.filter(c => c.combatantId !== combatantId);
+
+      tracker.order.push({
+        combatantId,
+        name,
+        initiativeTotal,
+        isNPC,
+        hasActed: false,
+        accumulatingTurns: accumulatingTurns || 0
+      });
+
+      tracker.order.sort((a, b) => b.initiativeTotal - a.initiativeTotal);
+      io.to(roomId).emit('combat:turn_order_updated', tracker);
+    });
+
+    socket.on('combat:next_turn', ({ roomId }) => {
+      const tracker = activeTurnTrackers[roomId];
+      if (!tracker || !tracker.isActive) return;
+
+      if (tracker.order[tracker.currentTurnIndex]) {
+        tracker.order[tracker.currentTurnIndex].hasActed = true;
+      }
+
+      tracker.currentTurnIndex += 1;
+
+      const emitSystemLog = (rId: string, msg: string) => {
+        io.to(rId).emit('combat:new_log', {
+          id: crypto.randomUUID(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          type: 'attack_miss', // Reusing this for system message format
+          attackerName: 'Sistema',
+          targetName: 'Mesa',
+          payload: {
+            attackTotal: 0, defenseTotal: 0, defenseType: 'DODGE', damageDealt: 0, armorMitigation: 0, finalHpMinus: 0, isCritical: true, criticalEffect: msg
+          }
+        });
+      };
+
+      if (tracker.currentTurnIndex >= tracker.order.length) {
+        tracker.currentRound += 1;
+        tracker.currentTurnIndex = 0;
+        tracker.order.forEach(c => c.hasActed = false);
+        
+        io.to(roomId).emit('combat:new_round_started', tracker);
+        emitSystemLog(roomId, `✨ ¡Comienza la Ronda ${tracker.currentRound}! Revisen sus estados.`);
+        return;
+      }
+
+      const activeCombatant = tracker.order[tracker.currentTurnIndex];
+      if (activeCombatant && activeCombatant.accumulatingTurns > 0) {
+        activeCombatant.accumulatingTurns -= 1;
+        emitSystemLog(roomId, `⏳ ${activeCombatant.name} continúa acumulando energía. Quedan ${activeCombatant.accumulatingTurns} turnos de concentración.`);
+      }
+
+      io.to(roomId).emit('combat:turn_order_updated', tracker);
+    });
+
+    // Old synchronous fallback or to be deprecated
     socket.on('resolve_attack', async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE', modifiers?: any }) => {
       const { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType = 'DODGE', modifiers } = data;
       try {
