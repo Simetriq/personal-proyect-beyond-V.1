@@ -12,6 +12,8 @@ import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 import { KiTree } from "./KiTree";
 import { KiAccumulator } from "./ui/KiAccumulator";
 import { DiceRoller } from "./ui/DiceRoller";
+import { MagicLevelUpSection, type LocalMagicSpend } from "./MagicLevelUpSection";
+import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
 
 const ITEM_ICONS: Record<string, string> = {
   'item-potion-minor': '/assets/icons/gen_potion_minor.webp',
@@ -29,6 +31,19 @@ export function PlayerView() {
   const [fatigueToSpend, setFatigueToSpend] = useState(1);
   const [counterTimeLeft, setCounterTimeLeft] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [localSpend, setLocalSpend] = useState<LocalMagicSpend>({
+    actuacion: 0,
+    zeon: 0,
+    vias: { FUEGO: 0, AGUA: 0 }
+  });
+
+  const handleViaChange = (viaName: 'FUEGO' | 'AGUA', newValue: number) => {
+    setLocalSpend(prev => ({
+      ...prev,
+      vias: { ...prev.vias, [viaName]: newValue }
+    }));
+  };
   
   // Use a hardcoded campaign and character for demonstration
   const CAMPAIGN_ID = "camp-1";
@@ -104,6 +119,26 @@ export function PlayerView() {
 
   const isActiveTurn = combatState.initiativeQueue[combatState.turnIndex]?.characterId === CHARACTER_ID;
   const showInitiativeModal = combatState.isRequestingInitiative && character.currentInitiative === null;
+
+  // Fase 9: Filtrado Dinámico de Vías Mágicas
+  let parsedDp = { vias: { FUEGO: 0, AGUA: 0 } };
+  try {
+    if (character.dpDistribution) {
+      parsedDp = JSON.parse(character.dpDistribution);
+      if (!parsedDp.vias) parsedDp.vias = { FUEGO: 0, AGUA: 0 };
+    }
+  } catch(e) {}
+
+  const currentVias = {
+    FUEGO: parsedDp.vias.FUEGO || 0,
+    AGUA: parsedDp.vias.AGUA || 0
+  };
+
+  const unlockedSpells = Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
+    const reqLevel = spell.requiredLevel;
+    // @ts-ignore
+    return currentVias[spell.via] >= reqLevel;
+  });
 
   return (
     <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
@@ -399,10 +434,11 @@ export function PlayerView() {
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 pointer-events-none"></div>
           <Tabs defaultValue="inventory" className="w-full h-full flex flex-col relative z-10">
             <CardHeader className="pb-0 pt-4 border-b border-gray-800/50 bg-[#0a0b0e]/80">
-              <TabsList className="w-full grid grid-cols-3 bg-transparent gap-2">
+              <TabsList className="w-full grid grid-cols-4 bg-transparent gap-2">
                 <TabsTrigger value="inventory" className="btn-piedra-runica data-[state=active]:border-anima-gold data-[state=active]:text-anima-goldglow data-[state=active]:shadow-glow-gold">Mi Inventario</TabsTrigger>
                 <TabsTrigger value="shop" className="btn-piedra-runica data-[state=active]:border-anima-gold data-[state=active]:text-anima-goldglow data-[state=active]:shadow-glow-gold">Tienda</TabsTrigger>
                 <TabsTrigger value="ki" className="btn-piedra-runica data-[state=active]:border-anima-ki data-[state=active]:text-cyan-300 data-[state=active]:shadow-glow-ki">Dominios Ki</TabsTrigger>
+                <TabsTrigger value="magic" className="btn-piedra-runica data-[state=active]:border-purple-500 data-[state=active]:text-purple-300 data-[state=active]:shadow-glow-purple">Magia</TabsTrigger>
               </TabsList>
             </CardHeader>
             <CardContent className="flex-grow p-0 pt-4">
@@ -559,6 +595,34 @@ export function PlayerView() {
                   )}
                 </div>
               </TabsContent>
+              <TabsContent value="magic" className="h-full m-0 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent">
+                <MagicLevelUpSection 
+                  currentVias={currentVias}
+                  localSpend={localSpend}
+                  onChangeVia={handleViaChange}
+                  availableDP={character.totalDP - character.spentDP}
+                />
+                
+                <div className="mt-4 flex justify-end">
+                  <Button className="bg-purple-800 hover:bg-purple-700 text-white font-bold" onClick={() => {
+                     // Aquí simulamos enviar al servidor para confirmar
+                     const mergedDp = {
+                       ...parsedDp,
+                       vias: {
+                         FUEGO: currentVias.FUEGO + localSpend.vias.FUEGO,
+                         AGUA: currentVias.AGUA + localSpend.vias.AGUA
+                       }
+                     };
+                     useCombatStore.getState().gmOverrideStats(CHARACTER_ID!, {
+                       dpDistribution: JSON.stringify(mergedDp),
+                       spentDP: character.spentDP + localSpend.vias.FUEGO + localSpend.vias.AGUA
+                     });
+                     setLocalSpend({ actuacion: 0, zeon: 0, vias: { FUEGO: 0, AGUA: 0 } });
+                  }}>
+                    Confirmar Transacción de PD
+                  </Button>
+                </div>
+              </TabsContent>
             </CardContent>
           </Tabs>
         </Card>
@@ -640,25 +704,38 @@ export function PlayerView() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              {Object.values(MAGIC_SPELLS).map(spell => {
-                const target = spell.target === 'ENEMY' ? targetId : CHARACTER_ID;
-                const isAttack = spell.type === 'DAMAGE' || spell.type === 'EFFECT';
-                const borderColor = isAttack ? 'border-red-800' : 'border-purple-800';
-                const textColor = isAttack ? 'text-red-400' : 'text-purple-300';
-                const hoverBg = isAttack ? 'hover:bg-red-950' : 'hover:bg-purple-950';
-                const icon = isAttack ? '🔥' : '🛡️';
-                const extraText = spell.target === 'ENEMY' ? ' - Usa Objetivo' : '';
+              {unlockedSpells.map(spell => {
+                const target = 'ENEMY'; // Simplified target logic for magic registry
+                const isAttack = true;
+                const borderColor = 'border-purple-800';
+                const textColor = 'text-purple-300';
+                const hoverBg = 'hover:bg-purple-950';
+                const icon = '🔮';
+                
                 return (
                   <Button 
                     key={spell.id}
-                    onClick={() => useAbility(CHARACTER_ID, target, spell.id)} 
+                    onClick={() => useAbility(CHARACTER_ID, targetId, spell.id)} 
                     variant="outline" 
-                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100 text-xs`}
+                    className={`w-full justify-start ${borderColor} ${textColor} ${hoverBg} transition-all active:scale-95 duration-100 text-xs text-left h-auto py-2 flex flex-col items-start gap-1`}
                   >
-                    {icon} {spell.name} ({spell.cost} Zeon){extraText}
+                    <div className="flex w-full justify-between items-center font-bold">
+                      <span>{icon} {spell.name}</span>
+                      <span className="text-[10px] text-purple-400 bg-purple-950 px-2 py-0.5 rounded-full border border-purple-800">
+                        {spell.zeonCostBase} Zeon
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-gray-400 font-serif whitespace-normal">
+                      Vía: {spell.via} Nvl {spell.requiredLevel} - {spell.description}
+                    </div>
                   </Button>
                 );
               })}
+              {unlockedSpells.length === 0 && (
+                 <div className="text-xs text-center text-purple-500/50 italic p-4">
+                   No tienes nivel suficiente en las vías mágicas para lanzar conjuros.
+                 </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -76,6 +76,13 @@ model Character {
   hasZen          Boolean        @default(false)
   isDead          Boolean        @default(false)
 
+  // Fase 9: Progresión y Puntos de Desarrollo
+  level           Int            @default(1)
+  category        String         @default("Freelancer")
+  totalDP         Int            @default(600)
+  spentDP         Int            @default(0)
+  dpDistribution  String         @default("{}")
+
   activeEffects   ActiveEffect[]
   inventoryItems  InventoryItem[]
   campaign        Campaign       @relation(fields: [campaignId], references: [id])

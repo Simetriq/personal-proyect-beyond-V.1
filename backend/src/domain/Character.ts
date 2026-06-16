@@ -73,6 +73,13 @@ export class Character {
   public martialStyles: string[];
   public activeMartialBonuses: { damage: number; attackBonus: number; defenseBonus: number; freeManeuvers: string[] } = { damage: 10, attackBonus: 0, defenseBonus: 0, freeManeuvers: [] };
 
+  // Fase 9
+  public level: number;
+  public category: string;
+  public totalDP: number;
+  public spentDP: number;
+  public dpDistribution: string;
+
   // Fase 10
   public strength: number;
   public dexterity: number;
@@ -129,6 +136,13 @@ export class Character {
     this.reloadTurnsLeft = data.reloadTurnsLeft || 0;
     this.martialStyles = Array.isArray(data.martialStyles) ? data.martialStyles : [];
     this.activeMartialBonuses = calculateCombinedStyle(this.martialStyles);
+
+    // Fase 9
+    this.level = data.level || 1;
+    this.category = data.category || 'Freelancer';
+    this.totalDP = data.totalDP || 600;
+    this.spentDP = data.spentDP || 0;
+    this.dpDistribution = data.dpDistribution || "{}";
 
     // Fase 10
     this.strength = data.strength ?? 5;
@@ -466,6 +480,11 @@ export class Character {
       targetSpellId: this.targetSpellId,
       reloadTurnsLeft: this.reloadTurnsLeft,
       martialStyles: this.martialStyles as any,
+      level: this.level,
+      category: this.category,
+      totalDP: this.totalDP,
+      spentDP: this.spentDP,
+      dpDistribution: this.dpDistribution,
       strength: this.strength,
       dexterity: this.dexterity,
       agility: this.agility,
