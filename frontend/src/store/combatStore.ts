@@ -86,6 +86,7 @@ export interface CombatStore {
   pendingCounterOpportunity: { attackerId: string; bonus: number; timeoutMs: number } | null;
   criticalHitEvent: { defenderId: string; level: number; location: number; instantKill: boolean } | null;
   weaponShatteredEvent: { characterId: string; weaponName: string } | null;
+  progressionDrafts: Record<string, any>;
   
   setMyCharacterId: (id: string) => void;
   clearCriticalHit: () => void;
@@ -123,6 +124,11 @@ export interface CombatStore {
   setFullDefense: (characterId: string, isFullDefense: boolean) => void;
   equipMartialStyle: (characterId: string, styleId: string) => void;
   unequipMartialStyle: (characterId: string, styleId: string) => void;
+
+  // Fase 10
+  sendProgressionDraft: (payload: any) => void;
+  approveLevelUp: (playerId: string) => void;
+  rejectLevelUp: (playerId: string) => void;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
@@ -145,6 +151,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   pendingCounterOpportunity: null,
   criticalHitEvent: null,
   weaponShatteredEvent: null,
+  progressionDrafts: {},
 
   setMyCharacterId: (id: string) => {
     localStorage.setItem('anima_character_id', id);
@@ -259,6 +266,24 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         set({ pendingCounterOpportunity: null });
       }
       console.log(`¡Contraataque de ${data.defenderId} confirmado!`);
+    });
+
+    // Fase 10: GM Progression Drafts
+    socket.on('gm:update_player_draft', (draft: any) => {
+      set((state) => ({
+        progressionDrafts: {
+          ...state.progressionDrafts,
+          [draft.playerId]: draft
+        }
+      }));
+    });
+
+    socket.on('gm:remove_player_draft', (playerId: string) => {
+      set((state) => {
+        const newDrafts = { ...state.progressionDrafts };
+        delete newDrafts[playerId];
+        return { progressionDrafts: newDrafts };
+      });
     });
 
     set({ socket, campaignId });
@@ -486,6 +511,27 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('unequip_martial_style', { campaignId, characterId, styleId });
+    }
+  },
+
+  sendProgressionDraft: (payload: any) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('player:progression_draft', payload);
+    }
+  },
+
+  approveLevelUp: (playerId: string) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('gm:approve_level_up', playerId);
+    }
+  },
+
+  rejectLevelUp: (playerId: string) => {
+    const { socket } = get();
+    if (socket) {
+      socket.emit('gm:reject_level_up', playerId);
     }
   }
 }));

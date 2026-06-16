@@ -12,8 +12,24 @@ import { KI_ABILITIES, MAGIC_SPELLS } from "../config/abilitiesRegistry";
 import { KiTree } from "./KiTree";
 import { KiAccumulator } from "./ui/KiAccumulator";
 import { DiceRoller } from "./ui/DiceRoller";
-import { MagicLevelUpSection, type LocalMagicSpend } from "./MagicLevelUpSection";
+import { MagicLevelUpSection } from "./MagicLevelUpSection";
+import { PhysicalLevelUpSection } from "./PhysicalLevelUpSection";
 import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
+import { CLASSES_CONFIG } from "../lib/classesConfig";
+
+interface LocalProgressionSpend {
+  physical: {
+    ataque: number;
+    esquiva: number;
+    parada: number;
+  };
+  magic: {
+    vias: {
+      FUEGO: number;
+      AGUA: number;
+    };
+  };
+}
 
 const ITEM_ICONS: Record<string, string> = {
   'item-potion-minor': '/assets/icons/gen_potion_minor.webp',
@@ -32,16 +48,22 @@ export function PlayerView() {
   const [counterTimeLeft, setCounterTimeLeft] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [localSpend, setLocalSpend] = useState<LocalMagicSpend>({
-    actuacion: 0,
-    zeon: 0,
-    vias: { FUEGO: 0, AGUA: 0 }
+  const [localSpend, setLocalSpend] = useState<LocalProgressionSpend>({
+    physical: { ataque: 0, esquiva: 0, parada: 0 },
+    magic: { vias: { FUEGO: 0, AGUA: 0 } }
   });
 
   const handleViaChange = (viaName: 'FUEGO' | 'AGUA', newValue: number) => {
     setLocalSpend(prev => ({
       ...prev,
-      vias: { ...prev.vias, [viaName]: newValue }
+      magic: { ...prev.magic, vias: { ...prev.magic.vias, [viaName]: newValue } }
+    }));
+  };
+
+  const handleStatChange = (stat: 'ataque' | 'esquiva' | 'parada', newValue: number) => {
+    setLocalSpend(prev => ({
+      ...prev,
+      physical: { ...prev.physical, [stat]: newValue }
     }));
   };
   
@@ -120,12 +142,13 @@ export function PlayerView() {
   const isActiveTurn = combatState.initiativeQueue[combatState.turnIndex]?.characterId === CHARACTER_ID;
   const showInitiativeModal = combatState.isRequestingInitiative && character.currentInitiative === null;
 
-  // Fase 9: Filtrado Dinámico de Vías Mágicas
-  let parsedDp = { vias: { FUEGO: 0, AGUA: 0 } };
+  // Fase 9: Filtrado Dinámico de Vías Mágicas y Progresión
+  let parsedDp = { vias: { FUEGO: 0, AGUA: 0 }, stats: { ataque: 0, esquiva: 0, parada: 0 } };
   try {
     if (character.dpDistribution) {
       parsedDp = JSON.parse(character.dpDistribution);
       if (!parsedDp.vias) parsedDp.vias = { FUEGO: 0, AGUA: 0 };
+      if (!parsedDp.stats) parsedDp.stats = { ataque: 0, esquiva: 0, parada: 0 };
     }
   } catch(e) {}
 
@@ -133,12 +156,40 @@ export function PlayerView() {
     FUEGO: parsedDp.vias.FUEGO || 0,
     AGUA: parsedDp.vias.AGUA || 0
   };
+  
+  const currentStats = {
+    ataque: parsedDp.stats.ataque || 0,
+    esquiva: parsedDp.stats.esquiva || 0,
+    parada: parsedDp.stats.parada || 0
+  };
 
   const unlockedSpells = Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
     const reqLevel = spell.requiredLevel;
     // @ts-ignore
     return currentVias[spell.via] >= reqLevel;
   });
+
+  const classConfig = CLASSES_CONFIG[character.category] || CLASSES_CONFIG['Freelancer'];
+  const maxCombatDP = character.totalDP * classConfig.limits.combat;
+  
+  const currentCombatDP = 
+    (currentStats.ataque * classConfig.costs.attack) + 
+    (currentStats.esquiva * classConfig.costs.dodge) + 
+    (currentStats.parada * classConfig.costs.block);
+
+  const totalPhysicalCost = 
+    (localSpend.physical.ataque * classConfig.costs.attack) +
+    (localSpend.physical.esquiva * classConfig.costs.dodge) +
+    (localSpend.physical.parada * classConfig.costs.block);
+
+  const totalMagicCost = localSpend.magic.vias.FUEGO + localSpend.magic.vias.AGUA;
+  const totalSpentThisLevel = totalPhysicalCost + totalMagicCost;
+  const projectedAvailableDP = (character.totalDP - character.spentDP) - totalSpentThisLevel;
+  
+  // FASE 9: Impacto real en estadísticas bases
+  const effectiveAttack = 50 + currentStats.ataque; // Assuming base 50
+  const effectiveDodge = 50 + currentStats.esquiva;
+  const effectiveBlock = 50 + currentStats.parada;
 
   return (
     <div className="grid grid-cols-12 gap-4 h-full p-4 text-white relative">
@@ -438,7 +489,7 @@ export function PlayerView() {
                 <TabsTrigger value="inventory" className="btn-piedra-runica data-[state=active]:border-anima-gold data-[state=active]:text-anima-goldglow data-[state=active]:shadow-glow-gold">Mi Inventario</TabsTrigger>
                 <TabsTrigger value="shop" className="btn-piedra-runica data-[state=active]:border-anima-gold data-[state=active]:text-anima-goldglow data-[state=active]:shadow-glow-gold">Tienda</TabsTrigger>
                 <TabsTrigger value="ki" className="btn-piedra-runica data-[state=active]:border-anima-ki data-[state=active]:text-cyan-300 data-[state=active]:shadow-glow-ki">Dominios Ki</TabsTrigger>
-                <TabsTrigger value="magic" className="btn-piedra-runica data-[state=active]:border-purple-500 data-[state=active]:text-purple-300 data-[state=active]:shadow-glow-purple">Magia</TabsTrigger>
+                <TabsTrigger value="progression" className="btn-piedra-runica data-[state=active]:border-purple-500 data-[state=active]:text-purple-300 data-[state=active]:shadow-glow-purple">Progresión</TabsTrigger>
               </TabsList>
             </CardHeader>
             <CardContent className="flex-grow p-0 pt-4">
@@ -595,29 +646,68 @@ export function PlayerView() {
                   )}
                 </div>
               </TabsContent>
-              <TabsContent value="magic" className="h-full m-0 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent">
-                <MagicLevelUpSection 
-                  currentVias={currentVias}
-                  localSpend={localSpend}
-                  onChangeVia={handleViaChange}
-                  availableDP={character.totalDP - character.spentDP}
-                />
+              <TabsContent value="progression" className="h-full m-0 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent">
+                {/* Cabecera Global */}
+                <div className="mb-6 p-4 bg-slate-950 border border-slate-700 rounded-lg flex justify-between items-center shadow-lg">
+                  <div>
+                    <h2 className="text-2xl font-serif text-anima-gold font-bold">Distribución de PD</h2>
+                    <div className="text-slate-400 text-sm">Clase: <span className="text-slate-200 font-bold">{character.category}</span></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-mono font-black text-white drop-shadow-md">
+                      {projectedAvailableDP} <span className="text-lg text-slate-500 font-normal">/ {character.totalDP}</span>
+                    </div>
+                    <div className="text-xs text-slate-400 uppercase tracking-widest mt-1">PD Disponibles</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Columna Izquierda: Físico */}
+                  <PhysicalLevelUpSection 
+                    currentStats={currentStats}
+                    localSpend={localSpend.physical}
+                    classCosts={{
+                      ataque: classConfig.costs.attack,
+                      esquiva: classConfig.costs.dodge,
+                      parada: classConfig.costs.block
+                    }}
+                    maxCombatDP={maxCombatDP}
+                    currentCombatDP={currentCombatDP}
+                    availableDP={projectedAvailableDP + totalPhysicalCost} // Available for physical is total free + what physical already took
+                    onChangeStat={handleStatChange}
+                  />
+
+                  {/* Columna Derecha: Mágico */}
+                  <MagicLevelUpSection 
+                    currentVias={currentVias}
+                    localSpend={{ actuacion: 0, zeon: 0, vias: localSpend.magic.vias }}
+                    onChangeVia={handleViaChange}
+                    availableDP={projectedAvailableDP + totalMagicCost}
+                  />
+                </div>
                 
-                <div className="mt-4 flex justify-end">
-                  <Button className="bg-purple-800 hover:bg-purple-700 text-white font-bold" onClick={() => {
-                     // Aquí simulamos enviar al servidor para confirmar
+                <div className="mt-6 flex justify-end pb-10">
+                  <Button 
+                    className="bg-green-700 hover:bg-green-600 text-white font-bold px-8 py-6 text-lg border-2 border-green-500 shadow-[0_0_15px_rgba(22,163,74,0.5)] transition-all disabled:opacity-50 disabled:bg-gray-800 disabled:border-gray-700" 
+                    disabled={totalSpentThisLevel <= 0 || projectedAvailableDP < 0 || (currentCombatDP + totalPhysicalCost > maxCombatDP)}
+                    onClick={() => {
                      const mergedDp = {
                        ...parsedDp,
                        vias: {
-                         FUEGO: currentVias.FUEGO + localSpend.vias.FUEGO,
-                         AGUA: currentVias.AGUA + localSpend.vias.AGUA
+                         FUEGO: currentVias.FUEGO + localSpend.magic.vias.FUEGO,
+                         AGUA: currentVias.AGUA + localSpend.magic.vias.AGUA
+                       },
+                       stats: {
+                         ataque: currentStats.ataque + localSpend.physical.ataque,
+                         esquiva: currentStats.esquiva + localSpend.physical.esquiva,
+                         parada: currentStats.parada + localSpend.physical.parada
                        }
                      };
                      useCombatStore.getState().gmOverrideStats(CHARACTER_ID!, {
                        dpDistribution: JSON.stringify(mergedDp),
-                       spentDP: character.spentDP + localSpend.vias.FUEGO + localSpend.vias.AGUA
+                       spentDP: character.spentDP + totalSpentThisLevel
                      });
-                     setLocalSpend({ actuacion: 0, zeon: 0, vias: { FUEGO: 0, AGUA: 0 } });
+                     setLocalSpend({ physical: { ataque: 0, esquiva: 0, parada: 0 }, magic: { vias: { FUEGO: 0, AGUA: 0 } } });
                   }}>
                     Confirmar Transacción de PD
                   </Button>

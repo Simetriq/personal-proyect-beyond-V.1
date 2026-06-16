@@ -13,6 +13,7 @@ const prisma = new PrismaClient({ log: ['info'] });
 
 import { getCombatTracker, CombatantInitiativeInfo } from '../engine/combatTracker';
 const npcManagers = new Map<string, Map<string, any>>();
+const activeProgressionDrafts: Record<string, any> = {};
 function getCampaignNpcs(campaignId: string) {
   if (!npcManagers.has(campaignId)) npcManagers.set(campaignId, new Map());
   return npcManagers.get(campaignId)!;
@@ -122,6 +123,37 @@ export function setupSocketEvents(io: Server) {
       } catch (e) {
         console.error('[Socket] Error on join_campaign sync:', e);
       }
+    });
+
+    socket.on('join_gm_room', () => {
+      socket.join('gm_room');
+      console.log(`[Socket] ${socket.id} joined gm_room`);
+    });
+
+    // --- Fase 10: Borradores de Progresión ---
+    socket.on('player:progression_draft', (payload: any) => {
+      activeProgressionDrafts[payload.playerId] = payload;
+      socket.to('gm_room').emit('gm:update_player_draft', payload);
+    });
+
+    socket.on('gm:approve_level_up', async (playerId: string) => {
+      const draft = activeProgressionDrafts[playerId];
+      if (!draft || draft.isOverLimit) return;
+      try {
+        io.to(playerId).emit('player:progression_approved');
+        delete activeProgressionDrafts[playerId];
+        io.to('gm_room').emit('gm:remove_player_draft', playerId);
+      } catch (error) {
+        console.error('Error al consolidar los PD en Prisma:', error);
+      }
+    });
+
+    socket.on('gm:reject_level_up', (playerId: string) => {
+      if (activeProgressionDrafts[playerId]) {
+        delete activeProgressionDrafts[playerId];
+      }
+      io.to(playerId).emit('player:progression_rejected');
+      io.to('gm_room').emit('gm:remove_player_draft', playerId);
     });
 
     // --- Fase 10 (Subfase C): Ciclo de Agonía y Desangramiento ---
