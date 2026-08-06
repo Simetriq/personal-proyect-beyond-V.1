@@ -3,8 +3,8 @@ import { useCombatStore } from '../store/combatStore';
 import { TurnOrderTracker } from './TurnOrderTracker';
 import { AlteredState, STATE_MODIFIERS } from '../types/combat';
 
-export const GameMasterDashboard: React.FC<{ socket: any }> = ({ socket }) => {
-  const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp, turnTracker, campaignId } = useCombatStore();
+export const GameMasterDashboard: React.FC = () => {
+  const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp, turnTracker, campaignId, executeGMCommand, toggleCharacterState } = useCombatStore();
   const [commandInput, setCommandInput] = useState('');
   const combatants = turnTracker?.order || [];
 
@@ -19,19 +19,12 @@ export const GameMasterDashboard: React.FC<{ socket: any }> = ({ socket }) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
 
-    socket.emit('combat:execute_gm_command', {
-      roomId: campaignId || 'camp-1',
-      commandString: commandInput
-    });
+    executeGMCommand(campaignId || 'camp-1', commandString);
     setCommandInput('');
   };
 
   const handleApplyState = (characterId: string, state: AlteredState) => {
-    socket.emit('combat:toggle_character_state', {
-      roomId: campaignId || 'camp-1',
-      characterId,
-      state
-    });
+    toggleCharacterState(campaignId || 'camp-1', characterId, state);
   };
 
   return (

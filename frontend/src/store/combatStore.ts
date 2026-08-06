@@ -95,6 +95,7 @@ export interface CombatStore {
   criticalHitEvent: { defenderId: string; level: number; location: string; instantKill: boolean } | null;
   fumbleEvent: { characterId: string; level: number; type: string } | null;
   weaponShatteredEvent: { characterId: string; weaponName: string } | null;
+  persistentSpells: any[];
   progressionDrafts: Record<string, any>;
   
   setMyCharacterId: (id: string) => void;
@@ -152,6 +153,11 @@ export interface CombatStore {
   // Fase 13
   turnTracker: TurnTracker | null;
   setTurnTracker: (tracker: TurnTracker) => void;
+
+  toggleMagicAccumulation: (roomId: string, characterId: string) => void;
+  castPersistentSpell: (roomId: string, characterId: string, spellName: string, zeonCost: number, maintenance: number) => void;
+  executeGMCommand: (roomId: string, commandString: string) => void;
+  toggleCharacterState: (roomId: string, characterId: string, state: string) => void;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
@@ -176,6 +182,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   criticalHitEvent: null,
   fumbleEvent: null,
   weaponShatteredEvent: null,
+  persistentSpells: [],
   progressionDrafts: {},
   logs: [],
   turnTracker: null,
@@ -286,6 +293,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
     socket.on('combat:fumble_occurred', (data) => {
       set({ fumbleEvent: data });
+    });
+
+    socket.on('combat:room_spells_updated', (data) => {
+      set({ persistentSpells: data });
     });
 
     socket.on('combat:bleeding_applied', (data: { defenderId: string }) => {
@@ -640,5 +651,22 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  clearIncomingAttack: () => set({ incomingAttack: null })
+  clearIncomingAttack: () => set({ incomingAttack: null }),
+
+  toggleMagicAccumulation: (roomId, characterId) => {
+    const { socket } = get();
+    if (socket) socket.emit('combat:toggle_magic_accumulation', { roomId, characterId });
+  },
+  castPersistentSpell: (roomId, characterId, spellName, zeonCost, maintenance) => {
+    const { socket } = get();
+    if (socket) socket.emit('combat:cast_persistent_spell', { roomId, characterId, spellName, zeonCost, maintenance });
+  },
+  executeGMCommand: (roomId, commandString) => {
+    const { socket } = get();
+    if (socket) socket.emit('combat:execute_gm_command', { roomId, commandString });
+  },
+  toggleCharacterState: (roomId, characterId, state) => {
+    const { socket } = get();
+    if (socket) socket.emit('combat:toggle_character_state', { roomId, characterId, state });
+  }
 }));
