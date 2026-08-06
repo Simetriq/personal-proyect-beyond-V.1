@@ -1,10 +1,28 @@
+import {
+  FUMBLE_THRESHOLD,
+  ARMOR_MULTIPLIER,
+  CRITICAL_HP_RATIO,
+  MIN_DAMAGE_PERCENT,
+  MAX_COUNTER_BONUS,
+  MANEUVER_PENALTIES,
+  AIMED_ATTACK_PENALTIES,
+  COVERAGE_PENALTIES,
+  FATIGUE_BONUS_PER_LEVEL,
+  CRITICAL_LOCATION_TABLE,
+  DEFENDER_FUMBLE_PENALTY,
+  CriticalLocation
+} from '../constants/combat';
+import { InvalidCombatInputError } from '../errors/CombatError';
+
+export type RandomFn = () => number;
+
 export interface CombatResolutionResult {
   damage: number;
   counterAttackBonus: number;
   message: string;
   isCritical?: boolean;
   criticalLevel?: number;
-  criticalLocation?: string;
+  criticalLocation?: CriticalLocation | '';
   isFumble?: boolean;
   fumbleLevel?: number;
   fumbleTarget?: 'attacker' | 'defender';
@@ -13,6 +31,8 @@ export interface CombatResolutionResult {
     broken: boolean;
   };
   armorAbsorbed?: number;
+  spellsApplied?: string[];
+  customNarrative?: string;
 }
 
 export interface CombatModifiers {
@@ -21,12 +41,116 @@ export interface CombatModifiers {
   isFullDefense?: boolean;
   aimedLocation?: string;
   coverage?: 'PARTIAL' | 'MILITARY' | 'TOTAL';
-  burnedFatigueAttack?: number;  // 1 = +15, 2 = +30
-  burnedFatigueDefense?: number; // 1 = +15, 2 = +30
+  burnedFatigueAttack?: number;
+  burnedFatigueDefense?: number;
   attackerRawRoll?: number;
   defenderRawRoll?: number;
+  envAttackMod?: number;
+  envDefenseMod?: number;
+  spellsApplied?: string[];
 }
 
+/**
+ * Checks for a fumble in the combat roll.
+ * @param rawRoll - The natural die roll (1-100).
+ * @param target - Whether the roll belongs to the attacker or defender.
+ * @param randomFn - Function to generate a random number.
+ * @returns An object containing fumble status, level, and message.
+ */
+function checkFumble(rawRoll: number | undefined, target: 'attacker' | 'defender', randomFn: RandomFn) {
+  if (rawRoll !== undefined && rawRoll <= FUMBLE_THRESHOLD) {
+    return {
+      isFumble: true,
+      fumbleLevel: Math.floor(randomFn() * 50) + 10,
+      target
+    };
+  }
+  return { isFumble: false };
+}
+
+/**
+ * Applies maneuver modifiers to the attack and defense rolls.
+ * @param modifiers - The combat modifiers to apply.
+ * @returns The adjustments for attack and defense, and whether a disarm attempt is made.
+ */
+function applyManeuverModifiers(modifiers: CombatModifiers): { attackAdjust: number; defenseAdjust: number; isDisarm: boolean } {
+  let attackAdjust = 0;
+  let defenseAdjust = 0;
+  let isDisarm = false;
+
+  if (modifiers.isAreaAttack) attackAdjust += MANEUVER_PENALTIES.AREA_ATTACK;
+  if (modifiers.isDisarm) {
+    attackAdjust += MANEUVER_PENALTIES.DISARM;
+    isDisarm = true;
+  }
+  if (modifiers.isFullDefense) {
+    defenseAdjust += MANEUVER_PENALTIES.FULL_DEFENSE;
+  }
+  if (modifiers.aimedLocation && modifiers.aimedLocation in AIMED_ATTACK_PENALTIES) {
+    attackAdjust += AIMED_ATTACK_PENALTIES[modifiers.aimedLocation as keyof typeof AIMED_ATTACK_PENALTIES];
+  }
+  if (modifiers.coverage && modifiers.coverage in COVERAGE_PENALTIES) {
+    attackAdjust += COVERAGE_PENALTIES[modifiers.coverage as keyof typeof COVERAGE_PENALTIES];
+  }
+  if (modifiers.burnedFatigueAttack) {
+    attackAdjust += modifiers.burnedFatigueAttack * FATIGUE_BONUS_PER_LEVEL;
+  }
+  if (modifiers.burnedFatigueDefense) {
+    defenseAdjust += modifiers.burnedFatigueDefense * FATIGUE_BONUS_PER_LEVEL;
+  }
+
+  return { attackAdjust, defenseAdjust, isDisarm };
+}
+
+/**
+ * Rolls for a critical location.
+ * @param randomFn - Function to generate a random number.
+ * @returns The resulting critical location.
+ */
+function rollCriticalLocation(randomFn: RandomFn): CriticalLocation {
+  const locRoll = Math.floor(randomFn() * 100) + 1;
+  const entry = CRITICAL_LOCATION_TABLE.find(entry => locRoll <= entry.maxRoll);
+  return entry ? entry.location : 'Pierna';
+}
+
+/**
+ * Calculates net damage, percentage, and absorbed damage based on attack success.
+ * @param diff - The difference between attack and defense.
+ * @param baseDamage - The base damage of the weapon.
+ * @param ta - The defender's armor type rating.
+ * @returns The final calculated damage, percentage, and absorbed amount.
+ */
+function calculateNetDamage(diff: number, baseDamage: number, ta: number): { finalDamage: number; percentage: number; absorbed: number } {
+  const absorbed = ta * ARMOR_MULTIPLIER;
+  const netDiff = diff - absorbed;
+  
+  if (netDiff <= 0) {
+    return { finalDamage: 0, percentage: 0, absorbed };
+  }
+
+  let percentage = Math.floor(netDiff / 10) * 10;
+  if (percentage < MIN_DAMAGE_PERCENT) percentage = MIN_DAMAGE_PERCENT;
+
+  const finalDamage = Math.floor((baseDamage * percentage) / 100);
+
+  return { finalDamage, percentage, absorbed };
+}
+
+/**
+ * Resolves a combat attack and calculates damage, criticals, and fumbles.
+ * @param attackRoll - The final attack roll before modifiers.
+ * @param defenseRoll - The final defense roll before modifiers.
+ * @param baseDamage - The base damage of the attacker's weapon.
+ * @param ta - The defender's armor type rating.
+ * @param defenderHp - The defender's total hit points.
+ * @param defenseType - Whether the defender blocked or dodged.
+ * @param attackerWeaponROT - Attacker's weapon breakability (ROT).
+ * @param defenderWeaponENT - Defender's weapon breakability (ENT).
+ * @param modifiers - Additional combat modifiers.
+ * @param randomFn - Random number generator.
+ * @returns The final result of the combat interaction.
+ * @throws {InvalidCombatInputError} If inputs are invalid.
+ */
 export function resolveAttack(
   attackRoll: number, 
   defenseRoll: number, 
@@ -36,55 +160,43 @@ export function resolveAttack(
   defenseType: 'BLOCK' | 'DODGE' = 'DODGE',
   attackerWeaponROT: number = 0,
   defenderWeaponENT: number = 0,
-  modifiers?: CombatModifiers
+  modifiers?: CombatModifiers,
+  randomFn: RandomFn = Math.random
 ): CombatResolutionResult {
-  // Aplicar modificadores del backend (Fase 7)
+  if (!Number.isFinite(attackRoll) || !Number.isFinite(defenseRoll) || baseDamage < 0) {
+    throw new InvalidCombatInputError('Invalid combat inputs');
+  }
+
   let finalAttackRoll = attackRoll;
   let finalDefenseRoll = defenseRoll;
-  let disarmAttempt = false;
+  let customNarrative = '';
 
-  // Fase 16: Pifias
-  if (modifiers?.attackerRawRoll && modifiers.attackerRawRoll <= 3) {
+  if (modifiers?.envAttackMod) finalAttackRoll += modifiers.envAttackMod;
+  if (modifiers?.envDefenseMod) finalDefenseRoll += modifiers.envDefenseMod;
+
+  const attackerFumble = checkFumble(modifiers?.attackerRawRoll, 'attacker', randomFn);
+  if (attackerFumble.isFumble) {
     return {
       damage: 0,
       counterAttackBonus: 0,
-      message: `¡PIFIA del Atacante! (Dado natural: ${modifiers.attackerRawRoll}). Tropieza y pierde la iniciativa.`,
+      message: `¡PIFIA del Atacante! (Dado natural: ${modifiers?.attackerRawRoll}). Tropieza y pierde la iniciativa.`,
       isFumble: true,
-      fumbleLevel: Math.floor(Math.random() * 50) + 10,
+      fumbleLevel: attackerFumble.fumbleLevel,
       fumbleTarget: 'attacker'
     };
   }
 
-  if (modifiers?.defenderRawRoll && modifiers.defenderRawRoll <= 3) {
-    // Si el defensor pifia, sufre penalización en la defensa
-    finalDefenseRoll -= 50; 
+  const defenderFumble = checkFumble(modifiers?.defenderRawRoll, 'defender', randomFn);
+  if (defenderFumble.isFumble) {
+    finalDefenseRoll += DEFENDER_FUMBLE_PENALTY;
   }
 
+  let disarmAttempt = false;
   if (modifiers) {
-    if (modifiers.isAreaAttack) finalAttackRoll -= 50;
-    if (modifiers.isDisarm) {
-      finalAttackRoll -= 40;
-      disarmAttempt = true;
-    }
-    if (modifiers.isFullDefense) {
-      finalDefenseRoll += 30; // +30 o +60, asumiendo base +30 aquí para simplificar
-    }
-    if (modifiers.aimedLocation) {
-      const AIMED_ATTACK_PENALTIES: Record<string, number> = {
-        'CABEZA': -60, 'OJOS': -100, 'CORAZON': -60, 'ABDOMEN': -20, 'BRAZO': -20, 'MUSLO': -20, 'PANTORRILLA': -10
-      };
-      finalAttackRoll += (AIMED_ATTACK_PENALTIES[modifiers.aimedLocation] || 0);
-    }
-    if (modifiers.coverage) {
-      const COVERAGE_PENALTIES: Record<string, number> = { 'PARTIAL': -40, 'MILITARY': -80, 'TOTAL': -120 };
-      finalAttackRoll += (COVERAGE_PENALTIES[modifiers.coverage] || 0);
-    }
-    if (modifiers.burnedFatigueAttack) {
-      finalAttackRoll += (modifiers.burnedFatigueAttack * 15);
-    }
-    if (modifiers.burnedFatigueDefense) {
-      finalDefenseRoll += (modifiers.burnedFatigueDefense * 15);
-    }
+    const { attackAdjust, defenseAdjust, isDisarm } = applyManeuverModifiers(modifiers);
+    finalAttackRoll += attackAdjust;
+    finalDefenseRoll += defenseAdjust;
+    disarmAttempt = isDisarm;
   }
 
   const diff = finalAttackRoll - finalDefenseRoll;
@@ -92,12 +204,11 @@ export function resolveAttack(
   if (diff < 0) {
     let rawBonus = Math.floor(Math.abs(diff) / 2);
     let counterAttackBonus = Math.floor(rawBonus / 5) * 5;
-    if (counterAttackBonus > 150) counterAttackBonus = 150;
+    if (counterAttackBonus > MAX_COUNTER_BONUS) counterAttackBonus = MAX_COUNTER_BONUS;
     
     let weaponClash = undefined;
     let message = `Ataque bloqueado/esquivado. Oportunidad de Contraataque: +${counterAttackBonus}`;
     
-    // Fase 6.3: Choque de Armas
     if (defenseType === 'BLOCK') {
       if (attackerWeaponROT > defenderWeaponENT) {
         weaponClash = { attackerWeaponWon: true, broken: true };
@@ -110,17 +221,22 @@ export function resolveAttack(
     if (disarmAttempt && diff >= -50) {
       message += ` Intento de desarme fallido.`;
     }
+
+    if (diff + (modifiers?.envDefenseMod || 0) >= 0) {
+      customNarrative = `¡El impacto fue completamente desviado por las barreras mágicas de la sala!`;
+      message += ' ' + customNarrative;
+    }
     
     return {
       damage: 0,
       counterAttackBonus,
       message,
       weaponClash,
-      armorAbsorbed: 0
+      armorAbsorbed: 0,
+      customNarrative
     };
   }
 
-  // Si fue un desarme exitoso (diff > 0), el daño es 0 y se desarma
   if (disarmAttempt) {
     return {
       damage: 0,
@@ -130,44 +246,32 @@ export function resolveAttack(
     };
   }
 
-  const absorb = ta * 10;
-  const netDiff = diff - absorb;
+  const { finalDamage, percentage, absorbed } = calculateNetDamage(diff, baseDamage, ta);
   
-  if (netDiff <= 0) {
+  if (percentage === 0) {
     return {
       damage: 0,
       counterAttackBonus: 0,
       message: `El ataque impactó (Dif: ${diff}), pero la armadura absorbió todo el daño.`,
-      armorAbsorbed: absorb
+      armorAbsorbed: absorbed
     };
   }
 
-  let percentage = Math.floor(netDiff / 10) * 10;
-  if (percentage < 10) percentage = 10;
-
-  const finalDamage = Math.floor((baseDamage * percentage) / 100);
-
-  // Fase 6.1 y 16: Crítico Automático
   let isCritical = false;
   let criticalLevel = 0;
-  let criticalLocationStr = '';
+  let criticalLocationStr: CriticalLocation | '' = '';
   
-  if (finalDamage >= (defenderHp / 2) && finalDamage > 0) {
+  if (finalDamage >= (defenderHp * CRITICAL_HP_RATIO) && finalDamage > 0) {
     isCritical = true;
-    criticalLevel = Math.max(1, finalDamage - (ta * 10)); // Nivel = Daño - (Armadura * 10)
-    
-    // Tabla D100 de Localización
-    const locRoll = Math.floor(Math.random() * 100) + 1;
-    if (locRoll <= 10) criticalLocationStr = 'Cabeza';
-    else if (locRoll <= 50) criticalLocationStr = 'Torso';
-    else if (locRoll <= 70) criticalLocationStr = 'Brazo';
-    else criticalLocationStr = 'Pierna';
+    criticalLevel = Math.max(1, finalDamage - absorbed);
+    criticalLocationStr = rollCriticalLocation(randomFn);
   }
 
-  let message = `¡Impacto! (Dif: ${diff}, Net: ${netDiff}). Se aplica ${percentage}% del Daño Base. Daño final: ${finalDamage}`;
+  let message = `¡Impacto! (Dif: ${diff}, Net: ${diff - absorbed}). Se aplica ${percentage}% del Daño Base. Daño final: ${finalDamage}`;
   if (isCritical) {
     message += ` ¡IMPACTO CRÍTICO! (Nivel ${criticalLevel}, Loc: ${criticalLocationStr})`;
   }
+
 
   return {
     damage: finalDamage,
@@ -176,6 +280,8 @@ export function resolveAttack(
     isCritical,
     criticalLevel,
     criticalLocation: criticalLocationStr,
-    armorAbsorbed: absorb
+    armorAbsorbed: absorbed,
+    spellsApplied: modifiers?.spellsApplied,
+    customNarrative
   };
 }
