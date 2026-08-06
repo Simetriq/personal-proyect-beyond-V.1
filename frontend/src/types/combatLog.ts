@@ -13,4 +13,5 @@ export interface CombatLogEntry {
     defenseTotal?: number;
     damageFinal?: number;
   };
+  spellsApplied?: string[];
 }

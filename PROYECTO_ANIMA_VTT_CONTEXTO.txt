@@ -1,0 +1,141 @@
+================================================================================
+          PROYECTO: ANIMA BEYOND FANTASY VTT (VIRTUAL TABLETOP)
+                    DOCUMENTO DE CONTEXTO Y ALCANCE
+================================================================================
+
+1. VISIÓN GENERAL Y OBJETIVO DEL PROYECTO
+--------------------------------------------------------------------------------
+El proyecto consiste en el desarrollo de un Asistente de Combate y Mesa Virtual (VTT)
+altamente automatizado, diseñado específicamente para el sistema de juego de rol
+"Anima: Beyond Fantasy".
+
+Anima es reconocido por su profundidad táctica y su densidad matemática (cálculos de 
+porcentaje de daño, tipos de armadura/absorción TA, tiradas enfrentadas, acumulaciones
+de Zeon y Ki, modificadores de estado, pifias, críticos con localización, etc.).
+
+El objetivo principal de este VTT es asumir toda esa carga matemática densa en tiempo
+real a través de un servidor backend, permitiendo que jugadores y Director de Juego (GM)
+disfruten de partidas fluidas, rápidas, visualmente deslumbrantes (estética cyberpunk/mística
+oscura) y con una narrativa de combate brutal.
+
+
+2. ARQUITECTURA Y STACK TECNOLÓGICO
+--------------------------------------------------------------------------------
+* FRONTEND:
+  - Framework: React + TypeScript + Vite.
+  - Estado Global: Zustand (stores modulares para combate, sockets y personajes).
+  - Comunicación: Socket.io-client para sincronización en tiempo real.
+  - Diseño / UI: CSS Vanilla / TailwindCSS con paleta oscura, acentos neón (cian, púrpura,
+    rojo carmesí, dorado místico), fuentes tipográficas Cinzel/Roboto y animaciones reactivas.
+  - Componentes Clave: PlayerView, GameMasterDashboard, TurnOrderTracker, BattleLogPanel,
+    CombatTargetPanel, MagicConsole, DefenseReactionModal.
+
+* BACKEND:
+  - Entorno: Node.js + TypeScript + Express.
+  - Real-Time Engine: Socket.io (Arquitectura Orientada a Eventos con Máquina de Estados).
+  - Persistencia: Prisma ORM (con base de datos relacional PostgreSQL / SQLite).
+  - Motor de Reglas (Engine): Módulos puros en TypeScript para resolución de combate,
+    dados, hemorragias, agonía/muerte, artes marciales y magia.
+
+
+3. RESUMEN DE LO REALIZADO HASTA LA FECHA (FASES 1 A 18)
+--------------------------------------------------------------------------------
+[Fases 1 a 5] FUNDAMENTOS Y HOJAS DE PERSONAJE:
+  - Modelado de base de datos con Prisma para personajes, atributos, resistencias e inventarios.
+  - Gestión de inventario con equipamiento dinámico de armas/armaduras y modificadores.
+  - Vista inicial del jugador y panel de control básico del GM.
+
+[Fase 6] MOTOR DE COMBATE BASE Y DAÑO FÍSICO:
+  - Implementación de la tabla de absorción de Armadura (TA) según tipos de daño (FIL, CON,
+    PEN, CAL, ELE, FRI, ENE).
+  - Sistema de penalizadores físicos por pérdida de Puntos de Vida (PV).
+  - Control de estados de Agonía/Muerte y tick de Sangrado continuo por asalto.
+
+[Fase 7] MODIFICADORES TÁCTICOS Y ACCIONES ESPECIALES:
+  - Reglas para Intentos de Desarme (-40 ATQ), Ataques en Área (-50 ATQ), Defensa Total (+30 DEF)
+    y Ataques Apuntados a localización.
+
+[Fase 8] VÍAS DE MAGIA Y ENERGÍA DE KI:
+  - Registro de habilidades de Ki y canalización de Zeon para magias elementales (Fuego/Agua).
+  - Consumo dinámico de reserva mágica y puntos de fatiga.
+
+[Fase 9] SISTEMA DE PROGRESIÓN Y PUNTOS DE DESARROLLO (PD):
+  - Calculadora de Puntos de Desarrollo (PD) por nivel y categoría de personaje.
+  - Emisión de borradores de progresión en tiempo real al GM para aprobación.
+
+[Fase 10] COMANDOS RÁPIDOS DEL GM Y AUDITORÍA:
+  - Implementación de macros e inyecciones directas en base de datos (`/give_dp`, `/damage`).
+
+[Fase 11] COMBATE ASÍNCRONO EN SOCKETS Y RADAR DE OBJETIVOS:
+  - Flujo de combate en dos tiempos: Declaración de Ataque -> Intercepción del servidor ->
+    Modal de Reacción Defensiva (`combat:defend_requested`) -> Resolución final.
+  - Componente `CombatTargetPanel.tsx` ("Radar de Amenazas") para selección de objetivos en vivo.
+
+[Fase 12] BATTLE LOG ENRIQUECIDO Y NARRATIVA TÁCTICA:
+  - Componente `BattleLogPanel.tsx` con historial en vivo, desglose de dados y cálculos.
+
+[Fase 13] MOTOR DE INICIATIVA DINÁMICA Y MARQUESINA DE TURNOS:
+  - Gestión de rondas y orden de turnos asíncrono.
+  - Marquesina visual superior (`TurnOrderTracker.tsx`) que ordena PJs y NPCs por iniciativa.
+  - Control de turnos acumulativos (concentración de Ki/Zeon).
+
+[Fase 14] OFUSCACIÓN DE LOGS Y LOGS SECRETOS DEL GM:
+  - Inyección del flag `isSecret` en logs para tiradas ocultas del Máster.
+  - Píldoras de filtrado en el log (Todos / Mío / Avisos).
+
+[Fase 15] OMNIPOTENCE INTERFACE (PANEL SUPREMO DEL GM):
+  - Consola de comandos CLI en `GameMasterDashboard.tsx`.
+  - Inyector Táctico de Estados Alterados (`STATE_MODIFIERS`: Ceguera, Parálisis, Sorpresa, Fatiga).
+
+[Fase 16] EL JUICIO DE LOS DADOS (CRÍTICOS Y PIFIAS AUTOMÁTICAS):
+  - Cálculo de Nivel de Crítico: `Daño - (Armadura * 10)` al sufrir >= 50% de PV máximos.
+  - Tabla D100 de Localización de Daño (Cabeza, Torso, Brazo, Pierna) e inyección automática
+    de modificadores de estado crítico (`critical_head`, `critical_arm`, etc.).
+  - Detección de Pifias (dados 1-3) con gravedad (`fumble_minor`, `fumble_major`) y modales
+    de advertencia visual en pantalla.
+
+[Fase 17] ACUMULACIÓN DE ZEON Y MAGIA PERSISTENTE:
+  - Estructuras `MagicData` y `PersistentSpell`.
+  - Mantenimiento automático de Zeon por turno (`processTurnMagicMaintenance`).
+  - Componente `MagicConsole.tsx` para acumular ACT y manifestar hechizos persistentes.
+
+[Fase 18] MODIFICADORES DINÁMICOS DE SALA (ENTORNO):
+  - Escáner de matrices mágicas activas en `resolveAttack` que aplica modificadores globales
+    de Ataque y Defensa.
+  - Renderizado de etiquetas de hechizos aplicados (`spellsApplied`) en los logs tácticos.
+
+
+4. ALCANCE Y FUTURO DEL PROYECTO (LO QUE QUEDA POR ABARCAR)
+--------------------------------------------------------------------------------
+Para completar la visión integral del VTT de Anima: Beyond Fantasy, el proyecto abarca
+las siguientes áreas a implementar en fases futuras:
+
+1. SISTEMA COMPLETO DE KI Y ARTES MARCIALES:
+   - Acumulación de Ki por características independientes (FUE, DES, AGU, CON, POD, VOL).
+   - Técnicas de Dominio personalizadas con costes de mantenimiento y efectos de área.
+   - Combate Marcial: Combinación de Estilos de Artes Marciales y bonificadores pasivos.
+
+2. GESTIÓN DE HORDAS Y NPCS MÚLTIPLES:
+   - Control en masa de grupos de enemigos por el GM (iniciativas agrupadas, ataques coordinados).
+   - Generador rápido de NPCs/Monstruos al vuelo con plantillas predefinidas.
+
+3. INVOCACIONES Y CREATURAS (CONVOCATORIA):
+   - Subsistema para la Vía de Convocatoria (Invocación, Encarnación, Atadura y Transformación).
+   - Control de familiares o criaturas invocadas asociadas al turno del convocador.
+
+4. TABLERO VISUAL / MAPA TÁCTICO VTT (GRID & TOKENS):
+   - Renderizado de mapa táctico con cuadrícula (Grid).
+   - Movimiento de Tokens de PJs/NPCs con cálculo de distancia y alcance de armas/conjuros.
+   - Niebla de Guerra (Fog of War) y visión dinámica según percepción y luz.
+
+5. SISTEMA DE SALUD MENTAL, SANGRADO Y REGENERACIÓN AVANZADA:
+   - Control de Puntos de Cansancio, Regeneración por asalto/hora y control de venenos.
+   - Tiradas de Control Mental / Miedo y estados de locura temporal.
+
+6. HERRAMIENTAS DE EXPORTACIÓN E IMPORTACIÓN:
+   - Importador/Exportador de fichas en formato JSON/PDF para facilitar el respaldo de PJs.
+
+
+================================================================================
+Documento generado automáticamente por Antigravity AI - Asistente de Desarrollo VTT
+================================================================================

@@ -112,6 +112,20 @@ export const BattleLogPanel: React.FC<BattleLogPanelProps> = ({ logs, activeChar
                     )}
                   </div>
                 )}
+
+                {/* Fase 18: Etiquetas de Hechizos Aplicados */}
+                {log.spellsApplied && log.spellsApplied.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {log.spellsApplied.map((spellTag, idx) => (
+                      <span 
+                        key={idx} 
+                        className="text-[9px] bg-purple-950/50 text-purple-300 border border-purple-800/40 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider"
+                      >
+                        {spellTag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })

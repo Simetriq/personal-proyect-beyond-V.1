@@ -13,13 +13,14 @@ import { CombatLogEntry } from '../types/combatLog';
 const prisma = new PrismaClient({ log: ['info'] });
 
 import { getCombatTracker, CombatantInitiativeInfo } from '../engine/combatTracker';
-import { TurnTracker } from '../types/combat';
+import { TurnTracker, PersistentSpell } from '../types/combat';
 import crypto from 'crypto';
 
 const npcManagers = new Map<string, Map<string, any>>();
 const activeProgressionDrafts: Record<string, any> = {};
 const activeCombats: Record<string, any> = {};
 const activeTurnTrackers: Record<string, TurnTracker> = {};
+const activePersistentSpells: Record<string, PersistentSpell[]> = {};
 function getCampaignNpcs(campaignId: string) {
   if (!npcManagers.has(campaignId)) npcManagers.set(campaignId, new Map());
   return npcManagers.get(campaignId)!;
@@ -600,6 +601,42 @@ export function setupSocketEvents(io: Server) {
         const attackerWeaponROT = attackerWeapon ? (attackerWeapon.breakage || 0) : 0;
         const defenderWeaponENT = defenderWeapon ? (defenderWeapon.fortitude || 0) : 0;
 
+        // FASE 18: Escáner de Matrices Mágicas Activas
+        let envAttackMod = 0;
+        let envDefenseMod = 0;
+        const activeSpellsApplied: string[] = [];
+
+        const roomSpells = activePersistentSpells[campaignId] || [];
+        if (roomSpells.length > 0) {
+          roomSpells.forEach((spell: PersistentSpell) => {
+            const isCasterAttacker = spell.casterId === attackerId;
+            const isCasterTarget = spell.casterId === targetId;
+
+            if (spell.globalModifiers) {
+              if (isCasterAttacker && spell.globalModifiers.attackMod) {
+                envAttackMod += spell.globalModifiers.attackMod;
+                activeSpellsApplied.push(`✨ ${spell.name} (+${spell.globalModifiers.attackMod} Atk)`);
+              }
+              if (isCasterTarget && spell.globalModifiers.defenseMod) {
+                envDefenseMod += spell.globalModifiers.defenseMod;
+                activeSpellsApplied.push(`🛡️ ${spell.name} (+${spell.globalModifiers.defenseMod} Def)`);
+              }
+              if (!spell.casterId) {
+                if (spell.globalModifiers.attackMod) envAttackMod += spell.globalModifiers.attackMod;
+                if (spell.globalModifiers.defenseMod) envDefenseMod += spell.globalModifiers.defenseMod;
+                activeSpellsApplied.push(`🌀 ${spell.name} (Mod. Entorno)`);
+              }
+            }
+          });
+        }
+        
+        const combatModifiers = {
+          ...modifiers,
+          envAttackMod,
+          envDefenseMod,
+          spellsApplied: activeSpellsApplied
+        };
+
         const result = resolveAttack(
           finalAttackRoll, 
           finalDefenseRoll, 
@@ -609,7 +646,7 @@ export function setupSocketEvents(io: Server) {
           data.defenseType,
           attackerWeaponROT,
           defenderWeaponENT,
-          modifiers
+          combatModifiers
         );
         
         if (result.weaponClash && result.weaponClash.broken && defenderWeapon) {
@@ -715,8 +752,13 @@ export function setupSocketEvents(io: Server) {
             total: finalAttackRoll,
             defenseTotal: finalDefenseRoll,
             damageFinal: result.damage
-          }
+          },
+          spellsApplied: result.spellsApplied
         };
+        
+        if (result.customNarrative) {
+          logEntry.message += ' ' + result.customNarrative;
+        }
         
         io.to(campaignId).emit('combat:new_log', logEntry);
 
@@ -800,7 +842,113 @@ export function setupSocketEvents(io: Server) {
         emitSystemLog(roomId, `⏳ ${activeCombatant.name} continúa acumulando energía. Quedan ${activeCombatant.accumulatingTurns} turnos de concentración.`);
       }
 
+      // FASE 17: Mantenimiento Mágico al ganar el turno
+      if (activeCombatant) {
+        processTurnMagicMaintenance(roomId, activeCombatant.combatantId);
+      }
+
       io.to(roomId).emit('combat:turn_order_updated', tracker);
+    });
+
+    // FASE 17: Procesar mantenimiento de magia
+    const processTurnMagicMaintenance = async (roomId: string, activeCharacterId: string) => {
+      const character = await loadCharacter(roomId, activeCharacterId);
+      if (!character || !character.magicData) return;
+
+      const magic = character.magicData;
+      let stateChanged = false;
+
+      // 1. Si está acumulando, absorbe su ACT
+      if (magic.isAccumulating) {
+        const spaceLeft = magic.maxZeon - magic.accumulatedZeon;
+        const addAmount = Math.min(magic.magicAccumulation, spaceLeft);
+        
+        if (addAmount > 0) {
+          magic.accumulatedZeon += addAmount;
+          emitSystemLog(roomId, `✨ ${character.name} canaliza el flujo del alma. Pozo de Zeon actual: [${magic.accumulatedZeon}]`);
+          stateChanged = true;
+        }
+      }
+
+      // 2. Procesar mantenimientos de Hechizos Persistentes
+      const roomSpells = activePersistentSpells[roomId] || [];
+      const userSpells = roomSpells.filter((s: any) => s.casterId === activeCharacterId);
+      
+      let spellsCollapsed = false;
+      userSpells.forEach((spell: PersistentSpell) => {
+        if (magic.currentZeon >= spell.zeonMaintenance) {
+          magic.currentZeon -= spell.zeonMaintenance;
+          emitSystemLog(roomId, `🔮 Mantenimiento: ${character.name} consume ${spell.zeonMaintenance} de Zeon para sostener [${spell.name}].`);
+          stateChanged = true;
+        } else {
+          // Si no le da el Zeon, el hechizo colapsa
+          activePersistentSpells[roomId] = activePersistentSpells[roomId].filter((s: any) => s.id !== spell.id);
+          emitSystemLog(roomId, `⚠️ El conjuro [${spell.name}] de ${character.name} colapsa por falta de energía mística.`);
+          spellsCollapsed = true;
+        }
+      });
+
+      if (spellsCollapsed) {
+        io.to(roomId).emit('combat:room_spells_updated', activePersistentSpells[roomId]);
+      }
+
+      if (stateChanged) {
+        await saveCharacter(character);
+        broadcastCharacterUpdate(roomId, character);
+      }
+    };
+
+    // FASE 17: Toggle Accumulation
+    socket.on('combat:toggle_magic_accumulation', async ({ roomId, characterId }) => {
+      try {
+        const character = await loadCharacter(roomId, characterId);
+        if (character) {
+          if (!character.magicData) {
+            character.magicData = {
+              currentZeon: character.zeon || 100,
+              maxZeon: character.zeon || 100,
+              accumulatedZeon: 0,
+              magicAccumulation: 20, // Default ACT
+              isAccumulating: false
+            };
+          }
+          character.magicData.isAccumulating = !character.magicData.isAccumulating;
+          await saveCharacter(character);
+          broadcastCharacterUpdate(roomId, character);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    // FASE 17: Cast Persistent Spell
+    socket.on('combat:cast_persistent_spell', async ({ roomId, characterId, spellName, zeonCost, maintenance }) => {
+      try {
+        const character = await loadCharacter(roomId, characterId);
+        if (character && character.magicData && character.magicData.accumulatedZeon >= zeonCost) {
+          character.magicData.accumulatedZeon -= zeonCost;
+          
+          if (!activePersistentSpells[roomId]) activePersistentSpells[roomId] = [];
+          
+          const newSpell: PersistentSpell = {
+            id: crypto.randomUUID(),
+            name: spellName,
+            casterId: characterId,
+            zeonMaintenance: maintenance,
+            description: 'Manifestación Mística',
+            globalModifiers: {}
+          };
+          
+          activePersistentSpells[roomId].push(newSpell);
+          
+          await saveCharacter(character);
+          broadcastCharacterUpdate(roomId, character);
+          io.to(roomId).emit('combat:room_spells_updated', activePersistentSpells[roomId]);
+          emitSystemLog(roomId, `💥 ${character.name} ha desatado [${spellName}] consumiendo ${zeonCost} Zeon. Coste de Mantenimiento: ${maintenance}/t.`);
+        }
+      } catch (e) {
+        console.error(e);
+      }
     });
 
     // Fase 14: Acción Secreta del DJ

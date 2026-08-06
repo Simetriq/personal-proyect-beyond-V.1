@@ -39,6 +39,27 @@ export interface CombatantTurn {
   accumulatingTurns: number;
 }
 
+export interface MagicData {
+  currentZeon: number;
+  maxZeon: number;
+  accumulatedZeon: number;
+  magicAccumulation: number;
+  isAccumulating: boolean;
+}
+
+export interface PersistentSpell {
+  id: string;
+  name: string;
+  casterId: string;
+  zeonMaintenance: number;
+  description: string;
+  globalModifiers: {
+    attackMod?: number;
+    defenseMod?: number;
+    magicResistance?: number;
+  };
+}
+
 export interface TurnTracker {
   isActive: boolean;
   currentRound: number;
