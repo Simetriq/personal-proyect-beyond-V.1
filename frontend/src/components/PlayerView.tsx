@@ -20,10 +20,13 @@ import { MagicLevelUpSection } from "./MagicLevelUpSection";
 import { PhysicalLevelUpSection } from "./PhysicalLevelUpSection";
 import { DefenseReactionModal } from './DefenseReactionModal';
 import { CombatTargetPanel, Combatant } from './CombatTargetPanel';
+import { MagicConsole } from './MagicConsole';
 import { BattleLogPanel } from './BattleLogPanel';
 import { TurnOrderTracker } from './TurnOrderTracker';
 import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
 import { CLASSES_CONFIG } from "../lib/classesConfig";
+import { CriticalHitModal, FumbleModal, WeaponShatteredModal } from './modals';
+
 
 interface LocalProgressionSpend {
   physical: {
@@ -47,7 +50,7 @@ const ITEM_ICONS: Record<string, string> = {
 };
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, fumbleEvent, clearFumbleEvent, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs } = useCombatStore();
+  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, fumbleEvent, clearFumbleEvent, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs, persistentSpells } = useCombatStore();
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
@@ -1025,109 +1028,32 @@ export function PlayerView() {
 
       {/* MODAL DE CRÍTICO RECIBIDO */}
       {criticalHitEvent && criticalHitEvent.defenderId === myCharacterId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border-2 border-red-900 rounded-lg p-6 max-w-md w-full shadow-[0_0_50px_rgba(255,0,0,0.4)] transform scale-100 animate-in fade-in zoom-in duration-300">
-            <h2 className="text-3xl font-cinzel font-bold text-red-500 mb-4 text-center">¡IMPACTO CRÍTICO RECIBIDO!</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-red-950/50 p-4 rounded text-center border border-red-900/50">
-                <div className="text-sm text-gray-400 mb-1">Nivel de Crítico</div>
-                <div className="text-4xl font-bold text-red-400">{criticalHitEvent.level}</div>
-              </div>
-              
-              <div className="bg-gray-800/50 p-4 rounded text-center border border-gray-700">
-                <div className="text-sm text-gray-400 mb-1">Localización</div>
-                <div className="text-2xl font-bold text-gray-200 uppercase">{criticalHitEvent.location}</div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Se ha aplicado el modificador de estado negativo.
-                </div>
-              </div>
-              
-              {criticalHitEvent.instantKill && (
-                <div className="p-3 bg-red-900 text-white font-bold text-center rounded border border-red-500 animate-pulse">
-                  ¡GOLPE FATAL! ¡AMPUTACIÓN EN PUNTO VITAL! (MUERTE INSTANTÁNEA)
-                </div>
-              )}
-              
-              {!criticalHitEvent.instantKill && (
-                <div className="p-3 bg-orange-950/50 text-orange-400 text-sm text-center rounded border border-orange-900/50">
-                  Estás sufriendo desangramiento. Perderás 1 PV por cada asalto.
-                </div>
-              )}
-              
-              <Button 
-                variant="destructive" 
-                className="w-full mt-4"
-                onClick={clearCriticalHit}
-              >
-                Aceptar Destino
-              </Button>
-            </div>
-          </div>
-        </div>
+        <CriticalHitModal event={criticalHitEvent} onDismiss={clearCriticalHit} />
       )}
 
       {/* MODAL DE PIFIA */}
       {fumbleEvent && fumbleEvent.characterId === myCharacterId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border-2 border-red-500 rounded-lg p-6 max-w-md w-full shadow-[0_0_50px_rgba(239,68,68,0.3)] transform scale-100 animate-in fade-in zoom-in duration-300">
-            <h2 className="text-3xl font-cinzel font-bold text-red-500 mb-4 text-center">¡PIFIA!</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-red-950/50 p-4 rounded text-center border border-red-900/50">
-                <div className="text-sm text-gray-400 mb-1">Nivel de Pifia</div>
-                <div className="text-4xl font-bold text-red-400">{fumbleEvent.level}</div>
-              </div>
-              
-              <div className="p-3 bg-red-900 text-white font-bold text-center rounded border border-red-500">
-                Has sufrido {fumbleEvent.type === 'fumble_major' ? 'un desastre táctico' : 'un tropiezo grave'}.
-                Se han aplicado penalizadores automáticos.
-              </div>
-              
-              <Button 
-                variant="destructive" 
-                className="w-full mt-4"
-                onClick={clearFumbleEvent}
-              >
-                Aceptar Error
-              </Button>
-            </div>
-          </div>
-        </div>
+        <FumbleModal event={fumbleEvent} onDismiss={clearFumbleEvent} />
       )}
 
       {/* MODAL DE ARMA ROTA */}
       {weaponShatteredEvent && weaponShatteredEvent.characterId === myCharacterId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border-2 border-orange-700 rounded-lg p-6 max-w-sm w-full shadow-[0_0_40px_rgba(255,165,0,0.3)] transform scale-100 animate-in fade-in zoom-in duration-300">
-            <h2 className="text-2xl font-cinzel font-bold text-orange-500 mb-4 text-center">¡ARMA DESTROZADA!</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-orange-950/50 p-4 rounded text-center border border-orange-900/50">
-                <div className="text-sm text-gray-400 mb-1">Tu arma ha sido destruida en el impacto:</div>
-                <div className="text-xl font-bold text-orange-400">"{weaponShatteredEvent.weaponName}"</div>
-              </div>
-              
-              <div className="p-3 bg-gray-800 text-gray-300 text-sm text-center rounded border border-gray-700">
-                El arma ha sido desequipada automáticamente y ya no proporcionará bonificadores.
-              </div>
-              
-              <Button 
-                className="w-full mt-4 bg-orange-700 hover:bg-orange-600 text-white font-bold"
-                onClick={clearWeaponShattered}
-              >
-                Entendido
-              </Button>
-            </div>
-          </div>
-        </div>
+        <WeaponShatteredModal event={weaponShatteredEvent} onDismiss={clearWeaponShattered} />
       )}
       )}
 
       </div>
       
-      {/* Fase 11 y 12: Radar de Objetivos y Log (Panel Derecho) */}
-      <div className="w-80 border-l border-[#3a2b1c] bg-[#0a0806] shrink-0 flex flex-col h-full">
+      {/* Fase 11, 12 y 17: Radar de Objetivos, Log y Magia (Panel Derecho) */}
+      <div className="w-80 border-l border-[#3a2b1c] bg-[#0a0806] shrink-0 flex flex-col h-full overflow-y-auto">
+        <div className="p-2 border-b border-slate-800">
+          <MagicConsole 
+            roomId={CAMPAIGN_ID} 
+            characterId={character.id} 
+            magicData={character.magicData} 
+            persistentSpells={persistentSpells} 
+          />
+        </div>
         <CombatTargetPanel 
           combatants={combatants} 
           currentUserId={character.id} 
