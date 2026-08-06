@@ -1,0 +1,127 @@
+import { HandlerContext } from '../types';
+import { safeHandler } from '../../middleware/errorHandler';
+import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
+
+export function registerGMHandlers(ctx: HandlerContext) {
+  const { socket, io, roomState, prisma } = ctx;
+
+  socket.on('combat:execute_gm_command', safeHandler(async ({ roomId, commandString }) => {
+    const parts = commandString.trim().split(' ');
+    const command = parts[0].toLowerCase();
+    
+    switch (command) {
+      case '/give_dp': {
+        const [_, targetId, amountStr] = parts;
+        const amount = parseInt(amountStr, 10);
+        
+        if (targetId && !isNaN(amount)) {
+          const character = await prisma.character.update({
+            where: { id: targetId },
+            data: { totalDP: { increment: amount } }
+          });
+          emitSystemLog(ctx, roomId, `🎁 El GM ha otorgado ${amount} PD a ${character.name}.`);
+          broadcastCharacterUpdate(ctx, roomId, character);
+        }
+        break;
+      }
+
+      case '/damage': {
+        const [_, targetId, amountStr] = parts;
+        const amount = parseInt(amountStr, 10);
+        
+        if (targetId && !isNaN(amount)) {
+          const character = await loadCharacter(ctx, roomId, targetId);
+          if (character) {
+            character.hp = Math.max(0, character.hp - amount);
+            await saveCharacter(ctx, character);
+            emitSystemLog(ctx, roomId, `💥 Una fuerza misteriosa inflige ${amount} de daño directo a ${character.name}.`);
+            broadcastCharacterUpdate(ctx, roomId, character);
+          }
+        }
+        break;
+      }
+
+      default:
+        socket.emit('combat:error', { message: 'Comando no reconocido o sintaxis inválida.' });
+    }
+  }));
+
+  socket.on('combat:toggle_character_state', safeHandler(async ({ roomId, characterId, state }) => {
+    const character = await loadCharacter(ctx, roomId, characterId);
+    if (character) {
+      if (!character.activeEffects) character.activeEffects = [];
+      
+      const existingIdx = character.activeEffects.findIndex((e: any) => e.type === state);
+      if (existingIdx >= 0) {
+        character.activeEffects.splice(existingIdx, 1);
+      } else {
+        character.activeEffects.push({ type: state, duration: -1 });
+      }
+      await saveCharacter(ctx, character);
+      broadcastCharacterUpdate(ctx, roomId, character);
+    }
+  }));
+
+  socket.on('gm:command_give_dp', safeHandler(async (payload: { playerId: string; amount: number }) => {
+    const { playerId, amount } = payload;
+
+    if (!playerId || isNaN(amount) || amount <= 0) {
+      socket.emit('gm:console_error', 'Error: Datos inválidos. Uso: /give_dp [id] [cantidad]');
+      return;
+    }
+
+    const characterActualizado = await prisma.character.update({
+      where: { id: playerId },
+      data: {
+        totalDP: {
+          increment: amount
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        totalDP: true,
+        spentDP: true
+      }
+    });
+
+    const availableDP = characterActualizado.totalDP - characterActualizado.spentDP;
+    io.to(playerId).emit('player:dp_received', {
+      amount,
+      newTotalDP: characterActualizado.totalDP,
+      availableDP
+    });
+
+    socket.emit('gm:console_success', `Inyectados ${amount} PD a ${characterActualizado.name} con éxito.`);
+  }));
+
+  socket.on('player:progression_draft', safeHandler((payload: any) => {
+    roomState.activeProgressionDrafts[payload.playerId] = payload;
+    socket.to('gm_room').emit('gm:update_player_draft', payload);
+  }));
+
+  socket.on('gm:approve_level_up', safeHandler(async (playerId: string) => {
+    const draft: any = roomState.activeProgressionDrafts[playerId];
+    if (!draft || draft.isOverLimit) return;
+    io.to(playerId).emit('player:progression_approved');
+    delete roomState.activeProgressionDrafts[playerId];
+    io.to('gm_room').emit('gm:remove_player_draft', playerId);
+  }));
+
+  socket.on('gm:reject_level_up', safeHandler((playerId: string) => {
+    if (roomState.activeProgressionDrafts[playerId]) {
+      delete roomState.activeProgressionDrafts[playerId];
+    }
+    io.to(playerId).emit('player:progression_rejected');
+    io.to('gm_room').emit('gm:remove_player_draft', playerId);
+  }));
+
+  socket.on('gm_update_character', safeHandler(async (data: { campaignId: string, characterId: string, updates: any }) => {
+    const character = await loadCharacter(ctx, data.campaignId, data.characterId);
+    if (character) {
+      if (character.gmOverrideStats) character.gmOverrideStats(data.updates);
+      await saveCharacter(ctx, character);
+      broadcastCharacterUpdate(ctx, data.campaignId, character);
+    }
+  }));
+}
