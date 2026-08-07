@@ -1,5 +1,5 @@
 import { HandlerContext } from '../types';
-import { safeHandler } from '../../middleware/errorHandler';
+import { safeHandler } from '../middleware/errorHandler';
 import { emitSystemLog } from './utils';
 import { processTurnMagicMaintenance } from './magicHandlers';
 import crypto from 'crypto';
@@ -9,7 +9,8 @@ import { broadcastCombatState, loadCharacter, saveCharacter, broadcastCharacterU
 export function registerTurnHandlers(ctx: HandlerContext) {
   const { socket, io, roomState, prisma } = ctx;
 
-  socket.on('combat:submit_initiative_v2', safeHandler(({ roomId, combatantId, name, roll, baseModifier, isNPC, accumulatingTurns }) => {
+  socket.on('combat:submit_initiative_v2', safeHandler(socket, (data: { roomId: string, combatantId: string, name: string, roll: number, baseModifier: number, isNPC: boolean, accumulatingTurns: boolean }) => {
+    const { roomId, combatantId, name, roll, baseModifier, isNPC, accumulatingTurns } = data;
     if (!roomState.activeTurnTrackers[roomId]) {
       roomState.activeTurnTrackers[roomId] = { isActive: true, currentRound: 1, currentTurnIndex: 0, order: [] };
     }
@@ -32,7 +33,8 @@ export function registerTurnHandlers(ctx: HandlerContext) {
     io.to(roomId).emit('combat:turn_order_updated', tracker);
   }));
 
-  socket.on('combat:next_turn', safeHandler(async ({ roomId }) => {
+  socket.on('combat:next_turn', safeHandler(socket, async (data: { roomId: string }) => {
+    const { roomId } = data;
     const tracker = roomState.activeTurnTrackers[roomId];
     if (!tracker || !tracker.isActive) return;
 
@@ -65,14 +67,16 @@ export function registerTurnHandlers(ctx: HandlerContext) {
     io.to(roomId).emit('combat:turn_order_updated', tracker);
   }));
 
-  socket.on('request_initiatives', safeHandler(({ campaignId }) => {
+  socket.on('request_initiatives', safeHandler(socket, (data: { campaignId: string }) => {
+    const { campaignId } = data;
     const tracker = getCombatTracker(campaignId);
     tracker.startRound();
     broadcastCombatState(ctx, campaignId);
     io.to(campaignId).emit('combat:round_started');
   }));
 
-  socket.on('next_turn', safeHandler(({ campaignId }) => {
+  socket.on('next_turn', safeHandler(socket, (data: { campaignId: string }) => {
+    const { campaignId } = data;
     const tracker = getCombatTracker(campaignId);
     const activeChar = tracker.nextTurn();
     broadcastCombatState(ctx, campaignId);
@@ -82,13 +86,14 @@ export function registerTurnHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('next_round_tick', safeHandler(async ({ campaignId }) => {
+  socket.on('next_round_tick', safeHandler(socket, async (data: { campaignId: string }) => {
+    const { campaignId } = data;
     const dbCharacters = await prisma.character.findMany({
       where: { campaignId: campaignId }
     });
 
     const npcs = Array.from(ctx.roomState.npcManagers.get(campaignId)?.values() || []);
-    const allCharactersToTick = [...dbCharacters.map((d: any) => d.id), ...npcs.map((n: any) => n.id)];
+    const allCharactersToTick = [...dbCharacters.map((d: {id: string}) => d.id), ...Array.from(npcs.values()).map((n: {id: string}) => n.id)];
     
     const tracker = getCombatTracker(campaignId);
 

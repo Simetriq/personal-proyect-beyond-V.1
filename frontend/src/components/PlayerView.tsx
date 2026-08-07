@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Swords } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -25,7 +25,7 @@ import { BattleLogPanel } from './BattleLogPanel';
 import { TurnOrderTracker } from './TurnOrderTracker';
 import { MAGIC_SPELLS_REGISTRY } from "../lib/magicRegistry";
 import { CLASSES_CONFIG } from "../lib/classesConfig";
-import { CriticalHitModal, FumbleModal, WeaponShatteredModal } from './modals';
+import { CriticalHitModal, FumbleModal, WeaponShatteredModal, InitiativeModal, CounterOpportunityModal } from './modals';
 
 
 interface LocalProgressionSpend {
@@ -50,13 +50,39 @@ const ITEM_ICONS: Record<string, string> = {
 };
 
 export function PlayerView() {
-  const { characters, applyDamage, connectToCampaign, equipItem, unequipItem, useItem, useAbility, combatState, submitInitiative, myCharacterId, buyItem, hasSynced, pendingCounterOpportunity, executeCounter, criticalHitEvent, clearCriticalHit, fumbleEvent, clearFumbleEvent, weaponShatteredEvent, clearWeaponShattered, sendProgressionDraft, incomingAttack, submitDefense, declareAttack, logs, persistentSpells } = useCombatStore();
+  const characters = useCombatStore(s => s.characters);
+  const combatState = useCombatStore(s => s.combatState);
+  const myCharacterId = useCombatStore(s => s.myCharacterId);
+  const hasSynced = useCombatStore(s => s.hasSynced);
+  const pendingCounterOpportunity = useCombatStore(s => s.pendingCounterOpportunity);
+  const criticalHitEvent = useCombatStore(s => s.criticalHitEvent);
+  const fumbleEvent = useCombatStore(s => s.fumbleEvent);
+  const weaponShatteredEvent = useCombatStore(s => s.weaponShatteredEvent);
+  const incomingAttack = useCombatStore(s => s.incomingAttack);
+  const logs = useCombatStore(s => s.logs);
+  const persistentSpells = useCombatStore(s => s.persistentSpells);
+
+  const applyDamage = useCombatStore(s => s.applyDamage);
+  const connectToCampaign = useCombatStore(s => s.connectToCampaign);
+  const equipItem = useCombatStore(s => s.equipItem);
+  const unequipItem = useCombatStore(s => s.unequipItem);
+  const useItem = useCombatStore(s => s.useItem);
+  const useAbility = useCombatStore(s => s.useAbility);
+  const submitInitiative = useCombatStore(s => s.submitInitiative);
+  const buyItem = useCombatStore(s => s.buyItem);
+  const executeCounter = useCombatStore(s => s.executeCounter);
+  const clearCriticalHit = useCombatStore(s => s.clearCriticalHit);
+  const clearFumbleEvent = useCombatStore(s => s.clearFumbleEvent);
+  const clearWeaponShattered = useCombatStore(s => s.clearWeaponShattered);
+  const sendProgressionDraft = useCombatStore(s => s.sendProgressionDraft);
+  const submitDefense = useCombatStore(s => s.submitDefense);
+  const declareAttack = useCombatStore(s => s.declareAttack);
+
   const [damageAmount, setDamageAmount] = useState("");
   const [selectedType, setSelectedType] = useState<DamageType>("FIL");
   const [initiativeInput, setInitiativeInput] = useState("");
   const [targetId, setTargetId] = useState<string>("");
   const [fatigueToSpend, setFatigueToSpend] = useState(1);
-  const [counterTimeLeft, setCounterTimeLeft] = useState<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [localSpend, setLocalSpend] = useState<LocalProgressionSpend>({
@@ -64,39 +90,25 @@ export function PlayerView() {
     magic: { vias: { FUEGO: 0, AGUA: 0 } }
   });
 
-  const handleViaChange = (viaName: 'FUEGO' | 'AGUA', newValue: number) => {
+  const handleViaChange = useCallback((viaName: 'FUEGO' | 'AGUA', newValue: number) => {
     setLocalSpend(prev => ({
       ...prev,
       magic: { ...prev.magic, vias: { ...prev.magic.vias, [viaName]: newValue } }
     }));
-  };
+  }, []);
 
-  const handleStatChange = (stat: 'ataque' | 'esquiva' | 'parada', newValue: number) => {
+  const handleStatChange = useCallback((stat: 'ataque' | 'esquiva' | 'parada', newValue: number) => {
     setLocalSpend(prev => ({
       ...prev,
       physical: { ...prev.physical, [stat]: newValue }
     }));
-  };
+  }, []);
   
   // Use a hardcoded campaign and character for demonstration
   const CAMPAIGN_ID = "camp-1";
   const CHARACTER_ID = myCharacterId;
 
-  useEffect(() => {
-    if (pendingCounterOpportunity) {
-      setCounterTimeLeft(pendingCounterOpportunity.timeoutMs);
-      const interval = setInterval(() => {
-        setCounterTimeLeft(prev => {
-          if (prev <= 100) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 100;
-        });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [pendingCounterOpportunity]);
+
 
   useEffect(() => {
     connectToCampaign(CAMPAIGN_ID);
@@ -104,28 +116,28 @@ export function PlayerView() {
 
   const character = CHARACTER_ID ? characters[CHARACTER_ID] : null;
 
-  const handleApplyDamage = () => {
+  const handleApplyDamage = useCallback(() => {
     const parsedAmount = parseInt(damageAmount, 10);
     if (!isNaN(parsedAmount) && parsedAmount > 0) {
       applyDamage(targetId, parsedAmount, selectedType);
       setDamageAmount(""); // Limpiar
       inputRef.current?.select(); // Auto-seleccionar para el siguiente
     }
-  };
+  }, [damageAmount, targetId, selectedType, applyDamage]);
 
-  const handleSubmitInitiative = () => {
+  const handleSubmitInitiative = useCallback(() => {
     const val = parseInt(initiativeInput, 10);
     if (!isNaN(val) && CHARACTER_ID) {
       submitInitiative(CHARACTER_ID, val);
       setInitiativeInput("");
     }
-  };
+  }, [initiativeInput, CHARACTER_ID, submitInitiative]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleApplyDamage();
     }
-  };
+  }, [handleApplyDamage]);
 
   if (!hasSynced) {
     return (
@@ -163,37 +175,40 @@ export function PlayerView() {
     }
   } catch(e) {}
 
-  const currentVias = {
+  const currentVias = useMemo(() => ({
     FUEGO: parsedDp.vias.FUEGO || 0,
     AGUA: parsedDp.vias.AGUA || 0
-  };
+  }), [parsedDp.vias.FUEGO, parsedDp.vias.AGUA]);
   
-  const currentStats = {
+  const currentStats = useMemo(() => ({
     ataque: parsedDp.stats.ataque || 0,
     esquiva: parsedDp.stats.esquiva || 0,
     parada: parsedDp.stats.parada || 0
-  };
+  }), [parsedDp.stats.ataque, parsedDp.stats.esquiva, parsedDp.stats.parada]);
 
-  const unlockedSpells = Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
+  const unlockedSpells = useMemo(() => Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
     const reqLevel = spell.requiredLevel;
     // @ts-ignore
     return currentVias[spell.via] >= reqLevel;
-  });
+  }), [currentVias]);
 
-  const classConfig = CLASSES_CONFIG[character.category] || CLASSES_CONFIG['Freelancer'];
-  const maxCombatDP = character.totalDP * classConfig.limits.combat;
+  const classConfig = useMemo(() => CLASSES_CONFIG[character.category] || CLASSES_CONFIG['Freelancer'], [character.category]);
   
-  const currentCombatDP = 
+  const maxCombatDP = useMemo(() => character.totalDP * classConfig.limits.combat, [character.totalDP, classConfig.limits.combat]);
+  
+  const currentCombatDP = useMemo(() => 
     (currentStats.ataque * classConfig.costs.attack) + 
     (currentStats.esquiva * classConfig.costs.dodge) + 
-    (currentStats.parada * classConfig.costs.block);
+    (currentStats.parada * classConfig.costs.block),
+  [currentStats, classConfig.costs]);
 
-  const totalPhysicalCost = 
+  const totalPhysicalCost = useMemo(() => 
     (localSpend.physical.ataque * classConfig.costs.attack) +
     (localSpend.physical.esquiva * classConfig.costs.dodge) +
-    (localSpend.physical.parada * classConfig.costs.block);
+    (localSpend.physical.parada * classConfig.costs.block),
+  [localSpend.physical, classConfig.costs]);
 
-  const totalMagicCost = localSpend.magic.vias.FUEGO + localSpend.magic.vias.AGUA;
+  const totalMagicCost = useMemo(() => localSpend.magic.vias.FUEGO + localSpend.magic.vias.AGUA, [localSpend.magic.vias]);
   const totalSpentThisLevel = totalPhysicalCost + totalMagicCost;
   const projectedAvailableDP = (character.totalDP - character.spentDP) - totalSpentThisLevel;
   
@@ -227,22 +242,22 @@ export function PlayerView() {
   ]);
 
   // Construir la lista de combatientes para el Radar
-  const combatants: Combatant[] = Object.values(characters).map(c => ({
+  const combatants: Combatant[] = useMemo(() => Object.values(characters).map(c => ({
     id: c.id,
     name: c.name,
     isNPC: c.category === 'NPC' || c.category === 'Enemigo' || c.hp === undefined, // Simulación rápida de flag NPC
     currentHp: combatState.characterStates[c.id]?.hp ?? c.hp ?? c.currentHp,
     maxHp: c.max_hp ?? c.hp ?? c.maxHp ?? 100
-  }));
+  })), [characters, combatState.characterStates]);
 
-  const handleDeclareAttack = (targetId: string, totalAttack: number) => {
+  const handleDeclareAttack = useCallback((targetId: string, totalAttack: number) => {
     // Tomamos el daño base del arma equipada o puño
-    const equippedWeapon = character.inventoryItems?.find(i => i.equipped && i.item.type === 'WEAPON')?.item;
+    const equippedWeapon = character.inventoryItems?.find((i: Record<string, any>) => i.equipped && i.item.type === 'WEAPON')?.item;
     const baseDamage = equippedWeapon?.baseDamage || 10;
     const damageType = equippedWeapon?.modifiers ? Object.keys(JSON.parse(equippedWeapon.modifiers))[0] : 'CON';
 
     declareAttack(targetId, totalAttack, baseDamage, damageType, {});
-  };
+  }, [character, declareAttack]);
 
   return (
     <div className="flex flex-col h-full text-white relative">
@@ -273,90 +288,21 @@ export function PlayerView() {
 
       {/* Modal de Iniciativa */}
       {showInitiativeModal && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm rounded-xl">
-          <div className="w-[420px] bg-[#161411] border-[2px] border-[#c5a059] rounded-lg shadow-[0_0_50px_rgba(197,160,89,0.3),inset_0_0_20px_rgba(0,0,0,1)] relative overflow-hidden" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-wood.png')" }}>
-            {/* Decorative top bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#c5a059] to-transparent"></div>
-            
-            <div className="p-6">
-              {/* Title */}
-              <div className="text-center mb-5">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Swords className="w-6 h-6 text-anima-gold animate-pulse drop-shadow-[0_0_8px_rgba(197,160,89,0.8)]" />
-                  <h2 className="text-2xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#c5a059] to-[#fcd97b] uppercase tracking-[0.2em] drop-shadow-md">
-                    ¡Tira Iniciativa!
-                  </h2>
-                  <Swords className="w-6 h-6 text-anima-gold animate-pulse drop-shadow-[0_0_8px_rgba(197,160,89,0.8)]" />
-                </div>
-                <p className="text-[#8b7355] font-serif italic text-sm">
-                  El Director de Juego ha solicitado las iniciativas para el <span className="text-[#c5a059] font-bold not-italic">Asalto {combatState.round}</span>.
-                </p>
-              </div>
-
-              {/* Separator */}
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-[#3a2b1c] to-transparent mb-5"></div>
-
-              {/* Input */}
-              <div className="mb-4">
-                <label className="block text-[#8b7355] text-[10px] uppercase tracking-widest font-serif mb-2 text-center">Resultado de los dados</label>
-                <Input 
-                  type="number" 
-                  placeholder="..." 
-                  className="text-3xl py-6 text-center bg-[#0a0806] border-[2px] border-[#3a2b1c] text-[#fcd97b] font-serif placeholder:text-[#3a2b1c] shadow-[inset_0_0_15px_rgba(0,0,0,1)] focus:border-[#c5a059] focus:shadow-[inset_0_0_15px_rgba(0,0,0,1),0_0_10px_rgba(197,160,89,0.3)]" 
-                  value={initiativeInput}
-                  onChange={(e) => setInitiativeInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmitInitiative()}
-                  autoFocus
-                />
-              </div>
-
-              {/* Button */}
-              <Button 
-                onClick={handleSubmitInitiative} 
-                className="w-full h-12 btn-piedra-runica bg-gradient-to-b from-[#2a2215] to-[#161411] border-[2px] border-[#c5a059] text-[#fcd97b] font-bold font-serif py-6 text-lg uppercase tracking-widest shadow-[0_4px_15px_rgba(0,0,0,0.8)] hover:from-[#3a2b1c] hover:to-[#161411] transition-all active:scale-95 duration-100 relative z-10"
-              >
-                Enviar Resultado
-              </Button>
-            </div>
-
-            {/* Decorative bottom bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#c5a059] to-transparent"></div>
-          </div>
-        </div>
+        <InitiativeModal 
+          round={combatState.round} 
+          initiativeInput={initiativeInput} 
+          setInitiativeInput={setInitiativeInput} 
+          onSubmit={handleSubmitInitiative} 
+        />
       )}
       
       {/* Modal de Contraataque */}
-      {pendingCounterOpportunity && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm rounded-xl">
-          <Card className="bg-red-950 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)] w-[400px]">
-            <CardHeader>
-              <CardTitle className="text-2xl text-red-500 text-center uppercase tracking-wide animate-pulse">
-                ¡Oportunidad de Contraataque!
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 text-center">
-              <p className="text-gray-200">Has bloqueado/esquivado el ataque con éxito.</p>
-              <p className="text-4xl font-black text-yellow-500 drop-shadow-md">
-                BONO: +{pendingCounterOpportunity.bonus}
-              </p>
-              <div className="w-full bg-gray-900 h-4 rounded-full border border-gray-700 overflow-hidden">
-                <div 
-                  className="bg-red-500 h-full transition-all duration-100 ease-linear" 
-                  style={{ width: `${(counterTimeLeft / pendingCounterOpportunity.timeoutMs) * 100}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-400">
-                Tiempo restante: {(counterTimeLeft / 1000).toFixed(1)}s
-              </p>
-              <Button 
-                onClick={() => executeCounter(CHARACTER_ID, pendingCounterOpportunity.attackerId, pendingCounterOpportunity.bonus)}
-                className="bg-red-600 hover:bg-red-500 text-white font-bold py-6 text-xl transition-transform active:scale-95"
-              >
-                ¡EJECUTAR CONTRAATAQUE!
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      {pendingCounterOpportunity && CHARACTER_ID && (
+        <CounterOpportunityModal 
+          bonus={pendingCounterOpportunity.bonus} 
+          timeoutMs={pendingCounterOpportunity.timeoutMs} 
+          onExecute={() => executeCounter(CHARACTER_ID, pendingCounterOpportunity.attackerId, pendingCounterOpportunity.bonus)} 
+        />
       )}
       
       {/* Cola de Iniciativa */}
@@ -570,7 +516,7 @@ export function PlayerView() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   {character.inventory && Object.values(character.inventory).length > 0 ? (
-                    Object.values(character.inventory).map((item: any) => (
+                    Object.values(character.inventory).map((item: Record<string, any>) => (
                       <div key={item.id} className="relative bg-[#161411] p-1.5 rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.9)] border border-[#111]">
                         {/* Marco exterior metálico */}
                         <div className="border-[3px] border-[#3a2b1c] rounded-sm p-1 shadow-[inset_0_0_10px_rgba(0,0,0,1)] bg-[#2a2215]">
@@ -828,7 +774,7 @@ export function PlayerView() {
                 
                 <div className="py-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent pr-2">
                   {character.activeEffects && character.activeEffects.length > 0 ? (
-                    character.activeEffects.map((effect: any) => (
+                    character.activeEffects.map((effect: Record<string, any>) => (
                       <div key={effect.id} className="text-sm p-3 bg-gradient-to-r from-[#2a0808] to-[#1a0505] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-3 flex flex-col gap-2 relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
                         <div className="relative z-10 flex items-center justify-between">

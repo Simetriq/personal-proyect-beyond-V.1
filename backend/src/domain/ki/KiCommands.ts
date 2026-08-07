@@ -5,8 +5,8 @@ export interface KiAbilityDef {
   id: string;
   name: string;
   cmCost: number;
-  prerequisites: any;
-  effectType: any;
+  prerequisites: string[];
+  effectType: string;
   kiCostActivation: number;
   kiCostMaintenance?: number;
   description: string;

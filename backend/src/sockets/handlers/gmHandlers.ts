@@ -1,11 +1,19 @@
 import { HandlerContext } from '../types';
-import { safeHandler } from '../../middleware/errorHandler';
+import { safeHandler } from '../middleware/errorHandler';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
+import { ActiveEffect, CharacterData } from '../../domain/Character';
+import { GMCommandSchema } from '../../validators/socketPayloads';
 
 export function registerGMHandlers(ctx: HandlerContext) {
   const { socket, io, roomState, prisma } = ctx;
 
-  socket.on('combat:execute_gm_command', safeHandler(async ({ roomId, commandString }) => {
+  socket.on('combat:execute_gm_command', safeHandler(socket, async (payload: any) => {
+    const parsed = GMCommandSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
+      return;
+    }
+    const { roomId, commandString } = parsed.data;
     const parts = commandString.trim().split(' ');
     const command = parts[0].toLowerCase();
     
@@ -15,12 +23,13 @@ export function registerGMHandlers(ctx: HandlerContext) {
         const amount = parseInt(amountStr, 10);
         
         if (targetId && !isNaN(amount)) {
-          const character = await prisma.character.update({
-            where: { id: targetId },
-            data: { totalDP: { increment: amount } }
-          });
-          emitSystemLog(ctx, roomId, `🎁 El GM ha otorgado ${amount} PD a ${character.name}.`);
-          broadcastCharacterUpdate(ctx, roomId, character);
+          const character = await loadCharacter(ctx, roomId, targetId);
+          if (character) {
+            character.totalDP = (character.totalDP || 600) + amount;
+            await saveCharacter(ctx, character);
+            emitSystemLog(ctx, roomId, `🎁 El GM ha otorgado ${amount} PD a ${character.name}.`);
+            broadcastCharacterUpdate(ctx, roomId, character);
+          }
         }
         break;
       }
@@ -32,7 +41,7 @@ export function registerGMHandlers(ctx: HandlerContext) {
         if (targetId && !isNaN(amount)) {
           const character = await loadCharacter(ctx, roomId, targetId);
           if (character) {
-            character.hp = Math.max(0, character.hp - amount);
+            character.currentHp = Math.max(0, character.currentHp - amount);
             await saveCharacter(ctx, character);
             emitSystemLog(ctx, roomId, `💥 Una fuerza misteriosa inflige ${amount} de daño directo a ${character.name}.`);
             broadcastCharacterUpdate(ctx, roomId, character);
@@ -46,12 +55,13 @@ export function registerGMHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:toggle_character_state', safeHandler(async ({ roomId, characterId, state }) => {
+  socket.on('combat:toggle_character_state', safeHandler(socket, async (data: { roomId: string, characterId: string, state: string }) => {
+    const { roomId, characterId, state } = data;
     const character = await loadCharacter(ctx, roomId, characterId);
     if (character) {
       if (!character.activeEffects) character.activeEffects = [];
       
-      const existingIdx = character.activeEffects.findIndex((e: any) => e.type === state);
+      const existingIdx = character.activeEffects.findIndex((e: ActiveEffect) => e.type === state);
       if (existingIdx >= 0) {
         character.activeEffects.splice(existingIdx, 1);
       } else {
@@ -62,7 +72,7 @@ export function registerGMHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('gm:command_give_dp', safeHandler(async (payload: { playerId: string; amount: number }) => {
+  socket.on('gm:command_give_dp', safeHandler(socket, async (payload: { playerId: string; amount: number }) => {
     const { playerId, amount } = payload;
 
     if (!playerId || isNaN(amount) || amount <= 0) {
@@ -95,20 +105,20 @@ export function registerGMHandlers(ctx: HandlerContext) {
     socket.emit('gm:console_success', `Inyectados ${amount} PD a ${characterActualizado.name} con éxito.`);
   }));
 
-  socket.on('player:progression_draft', safeHandler((payload: any) => {
+  socket.on('player:progression_draft', safeHandler(socket, (payload: Record<string, unknown>) => {
     roomState.activeProgressionDrafts[payload.playerId] = payload;
     socket.to('gm_room').emit('gm:update_player_draft', payload);
   }));
 
-  socket.on('gm:approve_level_up', safeHandler(async (playerId: string) => {
-    const draft: any = roomState.activeProgressionDrafts[playerId];
+  socket.on('gm:approve_level_up', safeHandler(socket, async (playerId: string) => {
+    const draft = roomState.activeProgressionDrafts[playerId];
     if (!draft || draft.isOverLimit) return;
     io.to(playerId).emit('player:progression_approved');
     delete roomState.activeProgressionDrafts[playerId];
     io.to('gm_room').emit('gm:remove_player_draft', playerId);
   }));
 
-  socket.on('gm:reject_level_up', safeHandler((playerId: string) => {
+  socket.on('gm:reject_level_up', safeHandler(socket, (playerId: string) => {
     if (roomState.activeProgressionDrafts[playerId]) {
       delete roomState.activeProgressionDrafts[playerId];
     }
@@ -116,7 +126,7 @@ export function registerGMHandlers(ctx: HandlerContext) {
     io.to('gm_room').emit('gm:remove_player_draft', playerId);
   }));
 
-  socket.on('gm_update_character', safeHandler(async (data: { campaignId: string, characterId: string, updates: any }) => {
+  socket.on('gm_update_character', safeHandler(socket, async (data: { campaignId: string, characterId: string, updates: Partial<CharacterData> }) => {
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character) {
       if (character.gmOverrideStats) character.gmOverrideStats(data.updates);

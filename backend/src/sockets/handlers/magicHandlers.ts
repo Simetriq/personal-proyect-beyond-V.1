@@ -1,13 +1,20 @@
 import { HandlerContext } from '../types';
-import { safeHandler } from '../../middleware/errorHandler';
+import { safeHandler } from '../middleware/errorHandler';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
 import crypto from 'crypto';
 import { PersistentSpell } from '../../types/combat';
+import { AccumulateZeonSchema } from '../../validators/socketPayloads';
 
 export function registerMagicHandlers(ctx: HandlerContext) {
   const { socket, roomState, io } = ctx;
 
-  socket.on('combat:toggle_magic_accumulation', safeHandler(async ({ roomId, characterId }) => {
+  socket.on('combat:toggle_magic_accumulation', safeHandler(socket, async (payload: any) => {
+    const parsed = AccumulateZeonSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
+      return;
+    }
+    const { roomId, characterId } = parsed.data;
     const character = await loadCharacter(ctx, roomId, characterId);
     if (character) {
       if (!character.magicData) {
@@ -25,7 +32,8 @@ export function registerMagicHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:cast_persistent_spell', safeHandler(async ({ roomId, characterId, spellName, zeonCost, maintenance }) => {
+  socket.on('combat:cast_persistent_spell', safeHandler(socket, async (data: { roomId: string, characterId: string, spellName: string, zeonCost: number, maintenance: number }) => {
+    const { roomId, characterId, spellName, zeonCost, maintenance } = data;
     const character = await loadCharacter(ctx, roomId, characterId);
     if (character && character.magicData && character.magicData.accumulatedZeon >= zeonCost) {
       character.magicData.accumulatedZeon -= zeonCost;
@@ -50,7 +58,8 @@ export function registerMagicHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:submit_secret_log', safeHandler(({ roomId, logEntry }) => {
+  socket.on('combat:submit_secret_log', safeHandler(socket, (data: { roomId: string, logEntry: any }) => {
+    const { roomId, logEntry } = data;
     const publicLog = {
       ...logEntry,
       message: `🤫 El Game Master realiza una acción en las sombras...`,
@@ -81,7 +90,7 @@ export const processTurnMagicMaintenance = async (ctx: HandlerContext, roomId: s
   }
 
   const roomSpells = ctx.roomState.activePersistentSpells[roomId] || [];
-  const userSpells = roomSpells.filter((s: any) => s.casterId === activeCharacterId);
+  const userSpells = roomSpells.filter((s: PersistentSpell) => s.casterId === activeCharacterId);
   
   let spellsCollapsed = false;
   userSpells.forEach((spell: PersistentSpell) => {
@@ -90,7 +99,7 @@ export const processTurnMagicMaintenance = async (ctx: HandlerContext, roomId: s
       emitSystemLog(ctx, roomId, `🔮 Mantenimiento: ${character.name} consume ${spell.zeonMaintenance} de Zeon para sostener [${spell.name}].`);
       stateChanged = true;
     } else {
-      ctx.roomState.activePersistentSpells[roomId] = ctx.roomState.activePersistentSpells[roomId].filter((s: any) => s.id !== spell.id);
+      ctx.roomState.activePersistentSpells[roomId] = ctx.roomState.activePersistentSpells[roomId].filter((s: PersistentSpell) => s.id !== spell.id);
       emitSystemLog(ctx, roomId, `⚠️ El conjuro [${spell.name}] de ${character.name} colapsa por falta de energía mística.`);
       spellsCollapsed = true;
     }

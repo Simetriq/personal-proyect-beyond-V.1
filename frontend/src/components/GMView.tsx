@@ -12,7 +12,7 @@ import { CombatCalculator } from "./CombatCalculator";
 import { DiceRoller } from "./ui/DiceRoller";
 import { GameMasterDashboard } from "./GameMasterDashboard";
 
-function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: any, combatStateData: any, gmUpdateCharacter: any, applyEffect: any, isActiveTurn: boolean, removeNpc: any }) {
+function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: Record<string, any>, combatStateData: Record<string, any>, gmUpdateCharacter: Function, applyEffect: Function, isActiveTurn: boolean, removeNpc: Function }) {
   const [hp, setHp] = useState(char.hp);
   const [gold, setGold] = useState(char.gold);
   const [isBleeding, setIsBleeding] = useState(false);
@@ -88,7 +88,7 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
                 </DialogHeader>
                 
                 <div className="py-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent pr-2">
-                  {char.activeEffects.map((effect: any) => (
+                  {char.activeEffects.map((effect: Record<string, any>) => (
                     <div key={effect.id} className="text-sm p-3 bg-gradient-to-r from-[#2a0808] to-[#1a0505] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-3 flex flex-col gap-2 relative overflow-hidden">
                       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
                       <div className="relative z-10 flex items-center justify-between">
@@ -226,7 +226,7 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
   );
 }
 
-function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: any, campaignId: string }) {
+function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: Function, campaignId: string }) {
   const [name, setName] = useState("Orco");
   const [maxHp, setMaxHp] = useState("100");
   const [ta, setTa] = useState({ FIL: "0", CON: "0", PEN: "0", CAL: "0", ELE: "0", FRI: "0", ENE: "0" });

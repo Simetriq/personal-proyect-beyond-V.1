@@ -1,5 +1,5 @@
 import { HandlerContext } from '../types';
-import { safeHandler } from '../../middleware/errorHandler';
+import { safeHandler } from '../middleware/errorHandler';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, getCampaignNpcs, broadcastCombatState } from './utils';
 import { getCombatTracker } from '../../engine/combatTracker';
 import { CharacterRepository } from '../../repositories/CharacterRepository';
@@ -7,11 +7,13 @@ import { tickBleeding } from '../../engine/bleeding';
 import { isAgony } from '../../engine/health';
 import { roll1d100 } from '../../engine/dice';
 import { ABILITIES_REGISTRY } from '../../domain/abilitiesRegistry';
+import { Character, Item } from '../../domain/Character';
+import { UseItemSchema } from '../../validators/socketPayloads';
 
 export function registerCharacterHandlers(ctx: HandlerContext) {
   const { socket, io, prisma, roomState } = ctx;
 
-  socket.on('join_campaign', safeHandler(async (campaignId: string) => {
+  socket.on('join_campaign', safeHandler(socket, async (campaignId: string) => {
     socket.join(campaignId);
     console.log(`[Socket] ${socket.id} joined campaign ${campaignId}`);
     
@@ -31,11 +33,11 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     broadcastCombatState(ctx, campaignId);
   }));
 
-  socket.on('join_gm_room', safeHandler(() => {
+  socket.on('join_gm_room', safeHandler(socket, () => {
     socket.join('gm_room');
   }));
 
-  socket.on('equip_item', safeHandler(async (data: { campaignId: string, characterId: string, itemId: string }) => {
+  socket.on('equip_item', safeHandler(socket, async (data: { campaignId: string, characterId: string, itemId: string }) => {
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character && character.equipItem) {
       character.equipItem(data.itemId);
@@ -44,7 +46,7 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('unequip_item', safeHandler(async (data: { campaignId: string, characterId: string, itemId: string }) => {
+  socket.on('unequip_item', safeHandler(socket, async (data: { campaignId: string, characterId: string, itemId: string }) => {
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character && character.unequipItem) {
       character.unequipItem(data.itemId);
@@ -53,7 +55,13 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('use_item', safeHandler(async (data: { campaignId: string, characterId: string, itemId: string }) => {
+  socket.on('use_item', safeHandler(socket, async (payload: any) => {
+    const parsed = UseItemSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
+      return;
+    }
+    const data = parsed.data;
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character && character.useItem) {
       character.useItem(data.itemId);
@@ -62,7 +70,7 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('buy_item', safeHandler(async (data: { campaignId: string, characterId: string, item: any, cost: number }) => {
+  socket.on('buy_item', safeHandler(socket, async (data: { campaignId: string, characterId: string, item: Item, cost: number }) => {
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character && character.gold >= data.cost) {
       character.gold -= data.cost;
@@ -74,7 +82,7 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('use_character_ability', safeHandler(async (data: { campaignId: string, sourceId: string, targetId: string, abilityKey: string }) => {
+  socket.on('use_character_ability', safeHandler(socket, async (data: { campaignId: string, sourceId: string, targetId: string, abilityKey: string }) => {
     const sourceChar = await loadCharacter(ctx, data.campaignId, data.sourceId);
     if (!sourceChar) return;
     const ability = ABILITIES_REGISTRY[data.abilityKey];
@@ -91,11 +99,11 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:tick_hour', safeHandler(async (campaignId: string) => {
+  socket.on('combat:tick_hour', safeHandler(socket, async (campaignId: string) => {
     const repo = new CharacterRepository(prisma);
     const dbCharacters = await prisma.character.findMany({ where: { campaignId } });
     
-    const processHour = async (character: any) => {
+    const processHour = async (character: Character) => {
       if (character.isDead) return false;
       let changed = false;
       if (isAgony(character.currentHp, character.constitution)) {
@@ -133,19 +141,19 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('roll_dice', safeHandler((data: { campaignId: string, characterId: string, characterName: string, result: number, isFumble: boolean, isOpen: boolean, description: string }) => {
+  socket.on('roll_dice', safeHandler(socket, (data: { campaignId: string, characterId: string, characterName: string, result: number, isFumble: boolean, isOpen: boolean, description: string }) => {
     io.to(data.campaignId).emit('dice_rolled', { ...data, timestamp: Date.now() });
   }));
 
-  socket.on('delete_dice_roll', safeHandler((data: { campaignId: string, timestamp: number }) => {
+  socket.on('delete_dice_roll', safeHandler(socket, (data: { campaignId: string, timestamp: number }) => {
     io.to(data.campaignId).emit('dice_roll_deleted', { timestamp: data.timestamp });
   }));
 
-  socket.on('update_character_stats', safeHandler(async (data: any) => {
+  socket.on('update_character_stats', safeHandler(socket, async (data: { campaignId: string, characterId: string, stats: Record<string, unknown> }) => {
     // Legacy support placeholder
   }));
 
-  socket.on('remove_npc', safeHandler((data: { campaignId: string, characterId: string }) => {
+  socket.on('remove_npc', safeHandler(socket, (data: { campaignId: string, characterId: string }) => {
     if (data.characterId.startsWith('npc_')) {
       getCampaignNpcs(ctx, data.campaignId).delete(data.characterId);
       const tracker = getCombatTracker(data.campaignId);

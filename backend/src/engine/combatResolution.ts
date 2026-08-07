@@ -109,8 +109,15 @@ function applyManeuverModifiers(modifiers: CombatModifiers): { attackAdjust: num
  */
 function rollCriticalLocation(randomFn: RandomFn): CriticalLocation {
   const locRoll = Math.floor(randomFn() * 100) + 1;
-  const entry = CRITICAL_LOCATION_TABLE.find(entry => locRoll <= entry.maxRoll);
-  return entry ? entry.location : 'Pierna';
+  for (const [range, location] of Object.entries(CRITICAL_LOCATION_TABLE)) {
+    const [minStr, maxStr] = range.split('-');
+    const min = parseInt(minStr, 10);
+    const max = parseInt(maxStr, 10);
+    if (locRoll >= min && locRoll <= max) {
+      return location;
+    }
+  }
+  return 'PIERNA';
 }
 
 /**

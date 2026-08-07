@@ -21,7 +21,7 @@ export interface Character {
   hp: number;
   maxHp: number;
   gold: number;
-  inventory: any;
+  inventory: Record<string, unknown>;
   resistances: Record<string, number>;
   ki: number;
   zeon: number;
@@ -29,7 +29,7 @@ export interface Character {
   currentInitiative: number | null;
   state: 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
   kiAbilities: string[];
-  activeEffects?: any[];
+  activeEffects?: Record<string, unknown>[];
   maxZeon?: number;
   maxKi?: number;
   currentFatigue?: number;
@@ -70,7 +70,7 @@ export interface CharacterCombatState {
   isDefensive: boolean;
   hasActed: boolean;
   isFullDefense?: boolean;
-  selectedManeuver?: any;
+  selectedManeuver?: Record<string, unknown>;
 }
 
 export interface CombatState {
@@ -95,33 +95,33 @@ export interface CombatStore {
   criticalHitEvent: { defenderId: string; level: number; location: string; instantKill: boolean } | null;
   fumbleEvent: { characterId: string; level: number; type: string } | null;
   weaponShatteredEvent: { characterId: string; weaponName: string } | null;
-  persistentSpells: any[];
-  progressionDrafts: Record<string, any>;
+  persistentSpells: Record<string, unknown>[];
+  progressionDrafts: Record<string, Record<string, unknown>>;
   
   setMyCharacterId: (id: string) => void;
   clearCriticalHit: () => void;
   clearWeaponShattered: () => void;
   connectToCampaign: (campaignId: string) => void;
   applyDamage: (characterId: string, amount: number, type: DamageType) => void;
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: any) => void;
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: Record<string, unknown>) => void;
   spendFatigue: (characterId: string, amount: number) => void;
   startChanneling: (characterId: string, spellId: string) => void;
   stopChanneling: (characterId: string) => void;
   reportPsychicFailure: (characterId: string, failureLevel: number) => void;
-  buyItem: (characterId: string, item: any, cost: number) => void;
-  createCharacter: (campaignId: string, characterId: string, data: any) => void;
+  buyItem: (characterId: string, item: Record<string, unknown>, cost: number) => void;
+  createCharacter: (campaignId: string, characterId: string, data: Record<string, unknown>) => void;
   equipItem: (characterId: string, itemId: string) => void;
   unequipItem: (characterId: string, itemId: string) => void;
   useItem: (characterId: string, itemId: string) => void;
-  gmUpdateCharacter: (characterId: string, updates: any) => void;
-  applyEffect: (characterId: string, effect: any) => void;
+  gmUpdateCharacter: (characterId: string, updates: Record<string, unknown>) => void;
+  applyEffect: (characterId: string, effect: Record<string, unknown>) => void;
   nextRoundTick: () => void;
   useAbility: (sourceId: string, targetId: string, abilityKey: string) => void;
   requestInitiatives: () => void;
   submitInitiative: (characterId: string, initiative: number) => void;
   nextTurn: () => void;
   executeCounter: (defenderId: string, attackerId: string, bonus: number) => void;
-  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => void;
+  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: Record<string, unknown> }) => void;
   removeNpc: (characterId: string) => void;
 
   buyKiAbility: (characterId: string, abilityId: string) => void;
@@ -136,12 +136,12 @@ export interface CombatStore {
   unequipMartialStyle: (characterId: string, styleId: string) => void;
 
   // Fase 10
-  sendProgressionDraft: (payload: any) => void;
+  sendProgressionDraft: (payload: Record<string, unknown>) => void;
   approveLevelUp: (playerId: string) => void;
   rejectLevelUp: (playerId: string) => void;
 
   // Fase 11
-  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any) => void;
+  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: Record<string, unknown>) => void;
   submitDefense: (combatInstanceId: string, defenseType: 'BLOCK' | 'DODGE', defenseRoll: number) => void;
   clearIncomingAttack: () => void;
 
@@ -215,7 +215,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       set({ isConnected: false, hasSynced: false });
     });
 
-    socket.on('attack_resolved', (data: any) => {
+    socket.on('attack_resolved', (data: Record<string, unknown>) => {
       console.log('Ataque resuelto', data);
       // Podríamos mostrar un toast notification aquí
     });
@@ -226,7 +226,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       }));
     });
 
-    socket.on('character_updated', (data: any) => {
+    socket.on('character_updated', (data: Record<string, unknown>) => {
       console.log('Personaje actualizado:', data);
       set((state) => ({
         characters: {
@@ -316,7 +316,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     });
 
     // Fase 10: GM Progression Drafts
-    socket.on('gm:update_player_draft', (draft: any) => {
+    socket.on('gm:update_player_draft', (draft: Record<string, unknown>) => {
       set((state) => ({
         progressionDrafts: {
           ...state.progressionDrafts,
@@ -394,7 +394,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: any) => {
+  resolveAttack: (attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: DamageType, defenseType: 'BLOCK' | 'DODGE', modifiers?: Record<string, unknown>) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('resolve_attack', { campaignId, attackerId, defenderId, attackRoll, defenseRoll, baseDamage, damageType, defenseType, modifiers });
@@ -429,7 +429,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  createCharacter: (campaignId: string, characterId: string, data: any) => {
+  createCharacter: (campaignId: string, characterId: string, data: Record<string, unknown>) => {
     const { socket } = get();
     if (socket) {
       socket.emit('create_character', {
@@ -461,21 +461,21 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  buyItem: (characterId: string, item: any, cost: number) => {
+  buyItem: (characterId: string, item: Record<string, unknown>, cost: number) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('buy_item', { campaignId, characterId, item, cost });
     }
   },
 
-  gmUpdateCharacter: (characterId: string, updates: any) => {
+  gmUpdateCharacter: (characterId: string, updates: Record<string, unknown>) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('gm_update_character', { campaignId, characterId, updates });
     }
   },
 
-  applyEffect: (characterId: string, effect: any) => {
+  applyEffect: (characterId: string, effect: Record<string, unknown>) => {
     const { socket, campaignId } = get();
     if (socket && campaignId) {
       socket.emit('apply_effect', { campaignId, characterId, effect });
@@ -525,7 +525,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: any }) => {
+  spawnNpc: (data: { campaignId: string, name: string, maxHp: number, resistances: Record<string, unknown> }) => {
     const { socket } = get();
     if (socket) {
       socket.emit('spawn_npc', data);
@@ -607,7 +607,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  sendProgressionDraft: (payload: any) => {
+  sendProgressionDraft: (payload: Record<string, unknown>) => {
     const { socket } = get();
     if (socket) {
       socket.emit('player:progression_draft', payload);
@@ -628,7 +628,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }
   },
 
-  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any) => {
+  declareAttack: (targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: Record<string, unknown>) => {
     const { socket, campaignId, myCharacterId } = get();
     if (socket && campaignId && myCharacterId) {
       socket.emit('combat:declare_attack', {

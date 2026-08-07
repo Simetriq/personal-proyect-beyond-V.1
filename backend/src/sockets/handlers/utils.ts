@@ -1,6 +1,7 @@
 import { HandlerContext } from '../types';
 import { CharacterRepository } from '../../repositories/CharacterRepository';
 import { getCombatTracker } from '../../engine/combatTracker';
+import { Character } from '../../domain/Character';
 import crypto from 'crypto';
 
 export function getCampaignNpcs(ctx: HandlerContext, campaignId: string) {
@@ -14,14 +15,14 @@ export async function loadCharacter(ctx: HandlerContext, campaignId: string, cha
   return await repo.findById(characterId);
 }
 
-export async function saveCharacter(ctx: HandlerContext, character: any) {
+export async function saveCharacter(ctx: HandlerContext, character: Character) {
   if (!character.id.startsWith('npc_')) {
     const repo = new CharacterRepository(ctx.prisma);
     await repo.save(character);
   }
 }
 
-export function broadcastCharacterUpdate(ctx: HandlerContext, campaignId: string, character: any) {
+export function broadcastCharacterUpdate(ctx: HandlerContext, campaignId: string, character: Character) {
   ctx.io.to(campaignId).emit('character_updated', {
     characterId: character.id,
     name: character.name,

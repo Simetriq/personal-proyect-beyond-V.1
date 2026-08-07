@@ -1,13 +1,24 @@
 import { HandlerContext } from '../types';
-import { safeHandler } from '../../middleware/errorHandler';
+import { safeHandler } from '../middleware/errorHandler';
 import { getCombatTracker } from '../../engine/combatTracker';
 import { resolveAttack } from '../../engine/combatResolution';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
+import { CombatLogEntry } from '../../types/combatLog';
+import { PersistentSpell } from '../../types/combat';
+
+import { ActiveCombat } from '../types';
+import { AttackRequestSchema, DefenseRequestSchema } from '../../validators/socketPayloads';
 
 export function registerCombatHandlers(ctx: HandlerContext) {
   const { socket, io, roomState } = ctx;
 
-  socket.on('combat:declare_attack', safeHandler(async (data: { campaignId: string, attackerId: string, targetId: string, attackRoll: number, baseDamage: number, damageType: string, modifiers?: any, weaponCard?: any }) => {
+  socket.on('combat:declare_attack', safeHandler(socket, async (payload: any) => {
+    const parsed = AttackRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
+      return;
+    }
+    const data = parsed.data;
     const attacker = await loadCharacter(ctx, data.campaignId, data.attackerId);
     if (!attacker) return;
     
@@ -27,8 +38,14 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     io.to('gm_room').emit('gm:console_success', `${attacker.name} está atacando a ID:${data.targetId} (Tirada: ${data.attackRoll})`);
   }));
 
-  socket.on('combat:submit_defense', safeHandler(async (data: { combatInstanceId: string, defenseType: 'BLOCK' | 'DODGE', defenseRoll: number }) => {
-    const combat: any = roomState.activeCombats[data.combatInstanceId];
+  socket.on('combat:submit_defense', safeHandler(socket, async (payload: any) => {
+    const parsed = DefenseRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
+      return;
+    }
+    const data = parsed.data;
+    const combat: ActiveCombat | undefined = roomState.activeCombats[data.combatInstanceId];
     if (!combat) return;
 
     const { campaignId, attackerId, targetId, attackRoll, baseDamage, damageType, modifiers } = combat;
@@ -68,7 +85,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     const activeSpellsApplied: string[] = [];
 
     const roomSpells = roomState.activePersistentSpells[campaignId] || [];
-    roomSpells.forEach((spell: any) => {
+    roomSpells.forEach((spell: PersistentSpell) => {
       const isCasterAttacker = spell.casterId === attackerId;
       const isCasterTarget = spell.casterId === targetId;
 
@@ -194,7 +211,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
       result
     });
 
-    const logEntry: any = {
+    const logEntry: CombatLogEntry = {
       id: `log_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
       timestamp: Date.now(),
       type: result.damage > 0 ? (result.isCritical ? 'critical' : 'attack_hit') : 'attack_miss',
@@ -231,11 +248,11 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('resolve_attack', safeHandler(async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE', modifiers?: any }) => {
+  socket.on('resolve_attack', safeHandler(socket, async (data: { campaignId: string, attackerId: string, defenderId: string, attackRoll: number, defenseRoll: number, baseDamage: number, damageType: string, defenseType?: 'BLOCK' | 'DODGE', modifiers?: Record<string, unknown> }) => {
     // Legacy support, abbreviated for length constraints
   }));
 
-  socket.on('combat:execute_counter', safeHandler((data: { campaignId: string, defenderId: string, attackerId: string, bonus: number }) => {
+  socket.on('combat:execute_counter', safeHandler(socket, (data: { campaignId: string, defenderId: string, attackerId: string, bonus: number }) => {
     const tracker = getCombatTracker(data.campaignId);
     if (tracker.resolvePendingCounter(data.defenderId)) {
       io.to(data.campaignId).emit('combat:counter_confirmed', data);
@@ -244,7 +261,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:set_full_defense', safeHandler(async (data: { campaignId: string, characterId: string, isFullDefense: boolean }) => {
+  socket.on('combat:set_full_defense', safeHandler(socket, async (data: { campaignId: string, characterId: string, isFullDefense: boolean }) => {
     const tracker = getCombatTracker(data.campaignId);
     const state = tracker.characterStates.get(data.characterId) || { isSurprised: false, isDefensive: false, hasActed: false };
     state.isDefensive = data.isFullDefense;
@@ -252,7 +269,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     ctx.io.to(data.campaignId).emit('combat_state_updated', tracker.getPublicState());
   }));
 
-  socket.on('apply_damage', safeHandler(async (data: { campaignId: string, characterId: string, amount: number, type: string }) => {
+  socket.on('apply_damage', safeHandler(socket, async (data: { campaignId: string, characterId: string, amount: number, type: string }) => {
     const character = await loadCharacter(ctx, data.campaignId, data.characterId);
     if (character && character.applyDirectDamage) {
       character.applyDirectDamage(data.amount, data.type);

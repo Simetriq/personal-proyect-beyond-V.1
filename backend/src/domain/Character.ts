@@ -36,6 +36,61 @@ export interface Item {
   isBroken?: boolean;
 }
 
+export const DEFAULT_TOTAL_DP = 600;
+export const DEFAULT_POTION_HEAL = 50;
+export const SHIELD_ZEON_THRESHOLD = 30;
+export const SHIELD_BONUS = 50;
+
+export interface CharacterData {
+  id: string;
+  name: string;
+  max_hp: number;
+  hp: number;
+  gold: number;
+  ki?: number;
+  zeon?: number;
+  resistances?: {
+    FIL?: number;
+    CON?: number;
+    PEN?: number;
+    CAL?: number;
+    ELE?: number;
+    FRI?: number;
+    ENE?: number;
+  };
+  inventory?: Record<string, Item>;
+  dotes?: ActiveEffect[];
+  activeEffects?: ActiveEffect[];
+  kiAbilities?: string[];
+  isBleeding?: boolean;
+  bleedingDamage?: number;
+  maxFatigue?: number;
+  currentFatigue?: number;
+  isChanneling?: boolean;
+  channeledZeon?: number;
+  targetSpellId?: string | null;
+  reloadTurnsLeft?: number;
+  martialStyles?: string[];
+  level?: number;
+  category?: string;
+  totalDP?: number;
+  spentDP?: number;
+  dpDistribution?: string;
+  strength?: number;
+  dexterity?: number;
+  agility?: number;
+  constitution?: number;
+  intelligence?: number;
+  power?: number;
+  willpower?: number;
+  perception?: number;
+  appearance?: number;
+  nephilimType?: string | null;
+  hasInhumanity?: boolean;
+  hasZen?: boolean;
+  isDead?: boolean;
+}
+
 export class Character {
   public id: string;
   public name: string;
@@ -96,7 +151,10 @@ export class Character {
   public hasZen: boolean;
   public isDead: boolean;
 
-  constructor(data: any) {
+  /**
+   * Constructs a domain Character instance from CharacterData.
+   */
+  constructor(data: CharacterData) {
     this.id = data.id;
     this.name = data.name;
     this.maxHp = data.max_hp;
@@ -314,9 +372,8 @@ export class Character {
   public useItem(itemId: string) {
     const item = this.inventory[itemId];
     if (item && item.type === 'CONSUMIBLE' && item.quantity > 0) {
-      // Simular uso de poción genérica (cura 50 HP)
-      // Idealmente, esto vendría en los modifiers del item o un handler específico
-      this.currentHp += 50;
+      // Simular uso de poción genérica
+      this.currentHp += DEFAULT_POTION_HEAL;
       if (this.currentHp > this.maxHp) this.currentHp = this.maxHp;
       
       item.quantity -= 1;
@@ -373,8 +430,8 @@ export class Character {
       this.zeon -= amount;
       
       // Habilidad mística hardcodeada de prueba
-      if (amount === 30) {
-        this.temporaryShield += 50;
+      if (amount === SHIELD_ZEON_THRESHOLD) {
+        this.temporaryShield += SHIELD_BONUS;
       }
       return true;
     }
@@ -464,6 +521,10 @@ export class Character {
   }
   
   // Extrae y prepara los datos para guardar en Prisma, incluyendo campos Fase 6
+  /**
+   * @deprecated Use CharacterMapper.toPrisma(character) instead.
+   * Extracts and prepares data for Prisma storage.
+   */
   public toPrismaData() {
     return {
       hp: this.currentHp,

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { Character, Item } from '../domain/Character';
+import { Character, Item, CharacterData } from '../domain/Character';
+import { CharacterMapper } from './CharacterMapper';
 
 export class CharacterRepository {
   private prisma: PrismaClient;
@@ -43,10 +44,10 @@ export class CharacterRepository {
       inventory: inventoryDict
     };
 
-    return new Character(domainData);
+    return CharacterMapper.toDomain(domainData);
   }
 
-  async create(data: any): Promise<Character> {
+  async create(data: Partial<CharacterData>): Promise<Character> {
     const dbChar = await this.prisma.character.create({
       data: {
         id: data.id,
@@ -81,37 +82,40 @@ export class CharacterRepository {
       inventory: {}
     };
 
-    return new Character(domainData);
+    return CharacterMapper.toDomain(domainData);
   }
 
   async save(character: Character): Promise<void> {
     // Deshidratación con transacción para manejar relaciones de inventario
     await this.prisma.$transaction(async (tx) => {
+      const prismaData = CharacterMapper.toPrisma(character);
+      const pData = prismaData as any;
+      
       await tx.character.update({
         where: { id: character.id },
         data: {
-          hp: character.currentHp,
-          gold: character.gold,
-          ki: character.ki,
-          zeon: character.zeon,
-          kiAbilities: JSON.stringify(character.kiAbilities || []),
+          hp: pData.hp as number,
+          gold: pData.gold as number,
+          ki: pData.ki as number,
+          zeon: pData.zeon as number,
+          kiAbilities: JSON.stringify(pData.kiAbilities || []),
           resistances: JSON.stringify({
-            FIL: character.baseResistances.FIL,
-            CON: character.baseResistances.CON,
-            PEN: character.baseResistances.PEN,
-            CAL: character.baseResistances.CAL,
-            ELE: character.baseResistances.ELE,
-            FRI: character.baseResistances.FRI,
-            ENE: character.baseResistances.ENE
+            FIL: pData.baseResistances?.FIL || 0,
+            CON: pData.baseResistances?.CON || 0,
+            PEN: pData.baseResistances?.PEN || 0,
+            CAL: pData.baseResistances?.CAL || 0,
+            ELE: pData.baseResistances?.ELE || 0,
+            FRI: pData.baseResistances?.FRI || 0,
+            ENE: pData.baseResistances?.ENE || 0
           }),
-          dotes: JSON.stringify(character.activeEffects || []),
-          isBleeding: character.isBleeding,
-          bleedingDamage: character.bleedingDamage,
-          currentFatigue: character.currentFatigue,
-          maxFatigue: character.maxFatigue,
-          isChanneling: character.isChanneling,
-          channeledZeon: character.channeledZeon,
-          targetSpellId: character.targetSpellId
+          dotes: JSON.stringify(pData.dotes || []),
+          isBleeding: pData.isBleeding as boolean,
+          bleedingDamage: pData.bleedingDamage as number,
+          currentFatigue: pData.currentFatigue as number,
+          maxFatigue: pData.maxFatigue as number,
+          isChanneling: pData.isChanneling as boolean,
+          channeledZeon: pData.channeledZeon as number,
+          targetSpellId: pData.targetSpellId as string | null
         }
       });
 
