@@ -111,8 +111,8 @@ function rollCriticalLocation(randomFn: RandomFn): CriticalLocation {
   const locRoll = Math.floor(randomFn() * 100) + 1;
   for (const [range, location] of Object.entries(CRITICAL_LOCATION_TABLE)) {
     const [minStr, maxStr] = range.split('-');
-    const min = parseInt(minStr, 10);
-    const max = parseInt(maxStr, 10);
+    const min = parseInt(minStr ?? '0', 10);
+    const max = parseInt(maxStr ?? '0', 10);
     if (locRoll >= min && locRoll <= max) {
       return location;
     }

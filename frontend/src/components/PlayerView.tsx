@@ -90,6 +90,8 @@ export function PlayerView() {
     magic: { vias: { FUEGO: 0, AGUA: 0 } }
   });
 
+  // [OPTIMIZACIÓN]: useCallback para evitar re-crear la función en cada render.
+  // Dependencias: ninguna (vacío []), usa el callback updater de setLocalSpend.
   const handleViaChange = useCallback((viaName: 'FUEGO' | 'AGUA', newValue: number) => {
     setLocalSpend(prev => ({
       ...prev,
@@ -97,6 +99,8 @@ export function PlayerView() {
     }));
   }, []);
 
+  // [OPTIMIZACIÓN]: useCallback para prevenir re-renders de hijos.
+  // Dependencias: ninguna, ya que usa la versión funcional de setState.
   const handleStatChange = useCallback((stat: 'ataque' | 'esquiva' | 'parada', newValue: number) => {
     setLocalSpend(prev => ({
       ...prev,
@@ -116,6 +120,8 @@ export function PlayerView() {
 
   const character = CHARACTER_ID ? characters[CHARACTER_ID] : null;
 
+  // [OPTIMIZACIÓN]: useCallback para la función de aplicar daño.
+  // Dependencias: damageAmount, targetId, selectedType (valores del UI local) y applyDamage (del store).
   const handleApplyDamage = useCallback(() => {
     const parsedAmount = parseInt(damageAmount, 10);
     if (!isNaN(parsedAmount) && parsedAmount > 0) {
@@ -125,6 +131,8 @@ export function PlayerView() {
     }
   }, [damageAmount, targetId, selectedType, applyDamage]);
 
+  // [OPTIMIZACIÓN]: useCallback para enviar iniciativa.
+  // Dependencias: initiativeInput, CHARACTER_ID (contexto local) y submitInitiative (del store).
   const handleSubmitInitiative = useCallback(() => {
     const val = parseInt(initiativeInput, 10);
     if (!isNaN(val) && CHARACTER_ID) {
@@ -133,6 +141,8 @@ export function PlayerView() {
     }
   }, [initiativeInput, CHARACTER_ID, submitInitiative]);
 
+  // [OPTIMIZACIÓN]: useCallback para manejar eventos del teclado.
+  // Dependencias: handleApplyDamage (ya memorizado).
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleApplyDamage();
@@ -175,25 +185,35 @@ export function PlayerView() {
     }
   } catch(e) {}
 
+  // [OPTIMIZACIÓN]: useMemo para derivar las vías mágicas del DP.
+  // Dependencias: parsedDp.vias.FUEGO, parsedDp.vias.AGUA (evita re-evaluación si el DP general cambia pero no las vías).
   const currentVias = useMemo(() => ({
     FUEGO: parsedDp.vias.FUEGO || 0,
     AGUA: parsedDp.vias.AGUA || 0
   }), [parsedDp.vias.FUEGO, parsedDp.vias.AGUA]);
   
+  // [OPTIMIZACIÓN]: useMemo para derivar stats físicas actuales.
+  // Dependencias: los valores atómicos de stats.
   const currentStats = useMemo(() => ({
     ataque: parsedDp.stats.ataque || 0,
     esquiva: parsedDp.stats.esquiva || 0,
     parada: parsedDp.stats.parada || 0
   }), [parsedDp.stats.ataque, parsedDp.stats.esquiva, parsedDp.stats.parada]);
 
+  // [OPTIMIZACIÓN]: useMemo para filtrar hechizos costosos.
+  // Dependencias: currentVias (solo se recalcula si cambian las vías mágicas).
   const unlockedSpells = useMemo(() => Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
     const reqLevel = spell.requiredLevel;
     // @ts-ignore
     return currentVias[spell.via] >= reqLevel;
   }), [currentVias]);
 
+  // [OPTIMIZACIÓN]: useMemo para la configuración de la clase actual.
+  // Dependencias: character.category (solo recalcula si el personaje cambia de clase).
   const classConfig = useMemo(() => CLASSES_CONFIG[character.category] || CLASSES_CONFIG['Freelancer'], [character.category]);
   
+  // [OPTIMIZACIÓN]: useMemo para costos y límites máximos.
+  // Dependencias: character.totalDP y los límites de la clase.
   const maxCombatDP = useMemo(() => character.totalDP * classConfig.limits.combat, [character.totalDP, classConfig.limits.combat]);
   
   const currentCombatDP = useMemo(() => 
@@ -202,20 +222,26 @@ export function PlayerView() {
     (currentStats.parada * classConfig.costs.block),
   [currentStats, classConfig.costs]);
 
+  // [OPTIMIZACIÓN]: useMemo para totalizador de costos locales físicos.
+  // Dependencias: el estado de gasto físico local y los costos de clase.
   const totalPhysicalCost = useMemo(() => 
     (localSpend.physical.ataque * classConfig.costs.attack) +
     (localSpend.physical.esquiva * classConfig.costs.dodge) +
     (localSpend.physical.parada * classConfig.costs.block),
   [localSpend.physical, classConfig.costs]);
 
+  // [OPTIMIZACIÓN]: useMemo para sumar costos mágicos.
   const totalMagicCost = useMemo(() => localSpend.magic.vias.FUEGO + localSpend.magic.vias.AGUA, [localSpend.magic.vias]);
-  const totalSpentThisLevel = totalPhysicalCost + totalMagicCost;
-  const projectedAvailableDP = (character.totalDP - character.spentDP) - totalSpentThisLevel;
+  
+  // [OPTIMIZACIÓN]: Derivaciones simples envueltas en useMemo.
+  // Dependencias: los costos totales y DP actual.
+  const totalSpentThisLevel = useMemo(() => totalPhysicalCost + totalMagicCost, [totalPhysicalCost, totalMagicCost]);
+  const projectedAvailableDP = useMemo(() => (character.totalDP - character.spentDP) - totalSpentThisLevel, [character.totalDP, character.spentDP, totalSpentThisLevel]);
   
   // FASE 9: Impacto real en estadísticas bases
-  const effectiveAttack = 50 + currentStats.ataque; // Assuming base 50
-  const effectiveDodge = 50 + currentStats.esquiva;
-  const effectiveBlock = 50 + currentStats.parada;
+  const effectiveAttack = useMemo(() => 50 + currentStats.ataque, [currentStats.ataque]); // Assuming base 50
+  const effectiveDodge = useMemo(() => 50 + currentStats.esquiva, [currentStats.esquiva]);
+  const effectiveBlock = useMemo(() => 50 + currentStats.parada, [currentStats.parada]);
 
   // Fase 10: Emitir Borrador al DJ
   useEffect(() => {
@@ -242,6 +268,8 @@ export function PlayerView() {
   ]);
 
   // Construir la lista de combatientes para el Radar
+  // [OPTIMIZACIÓN]: useMemo para transformar la lista de personajes.
+  // Dependencias: el objeto dict de characters y characterStates (actualiza al recibir daño).
   const combatants: Combatant[] = useMemo(() => Object.values(characters).map(c => ({
     id: c.id,
     name: c.name,
@@ -250,6 +278,8 @@ export function PlayerView() {
     maxHp: c.max_hp ?? c.hp ?? c.maxHp ?? 100
   })), [characters, combatState.characterStates]);
 
+  // [OPTIMIZACIÓN]: useCallback para la declaración de ataque.
+  // Dependencias: character.inventoryItems (para extraer el arma) y el action de declareAttack del store.
   const handleDeclareAttack = useCallback((targetId: string, totalAttack: number) => {
     // Tomamos el daño base del arma equipada o puño
     const equippedWeapon = character.inventoryItems?.find((i: Record<string, any>) => i.equipped && i.item.type === 'WEAPON')?.item;
@@ -257,7 +287,7 @@ export function PlayerView() {
     const damageType = equippedWeapon?.modifiers ? Object.keys(JSON.parse(equippedWeapon.modifiers))[0] : 'CON';
 
     declareAttack(targetId, totalAttack, baseDamage, damageType, {});
-  }, [character, declareAttack]);
+  }, [character.inventoryItems, declareAttack]);
 
   return (
     <div className="flex flex-col h-full text-white relative">
