@@ -29,7 +29,7 @@ export class CharacterRepository {
           id: inv.item.id,
           name: inv.item.name,
           quantity: inv.quantity,
-          type: inv.item.type as any,
+          type: inv.item.type as Item['type'],
           equipped: inv.equipped,
           modifiers: inv.item.modifiers ? JSON.parse(inv.item.modifiers as string) : undefined
         };
@@ -89,33 +89,24 @@ export class CharacterRepository {
     // Deshidratación con transacción para manejar relaciones de inventario
     await this.prisma.$transaction(async (tx) => {
       const prismaData = CharacterMapper.toPrisma(character);
-      const pData = prismaData as any;
       
       await tx.character.update({
         where: { id: character.id },
         data: {
-          hp: pData.hp as number,
-          gold: pData.gold as number,
-          ki: pData.ki as number,
-          zeon: pData.zeon as number,
-          kiAbilities: JSON.stringify(pData.kiAbilities || []),
-          resistances: JSON.stringify({
-            FIL: pData.baseResistances?.FIL || 0,
-            CON: pData.baseResistances?.CON || 0,
-            PEN: pData.baseResistances?.PEN || 0,
-            CAL: pData.baseResistances?.CAL || 0,
-            ELE: pData.baseResistances?.ELE || 0,
-            FRI: pData.baseResistances?.FRI || 0,
-            ENE: pData.baseResistances?.ENE || 0
-          }),
-          dotes: JSON.stringify(pData.dotes || []),
-          isBleeding: pData.isBleeding as boolean,
-          bleedingDamage: pData.bleedingDamage as number,
-          currentFatigue: pData.currentFatigue as number,
-          maxFatigue: pData.maxFatigue as number,
-          isChanneling: pData.isChanneling as boolean,
-          channeledZeon: pData.channeledZeon as number,
-          targetSpellId: pData.targetSpellId as string | null
+          hp: prismaData.hp,
+          gold: prismaData.gold,
+          ki: prismaData.ki,
+          zeon: prismaData.zeon,
+          kiAbilities: JSON.stringify(prismaData.kiAbilities),
+          resistances: JSON.stringify(prismaData.baseResistances),
+          dotes: JSON.stringify(prismaData.dotes),
+          isBleeding: prismaData.isBleeding,
+          bleedingDamage: prismaData.bleedingDamage,
+          currentFatigue: prismaData.currentFatigue,
+          maxFatigue: prismaData.maxFatigue,
+          isChanneling: prismaData.isChanneling,
+          channeledZeon: prismaData.channeledZeon,
+          targetSpellId: prismaData.targetSpellId
         }
       });
 

@@ -520,46 +520,4 @@ export class Character {
     return penalty;
   }
   
-  // Extrae y prepara los datos para guardar en Prisma, incluyendo campos Fase 6
-  /**
-   * @deprecated Use CharacterMapper.toPrisma(character) instead.
-   * Extracts and prepares data for Prisma storage.
-   */
-  public toPrismaData() {
-    return {
-      hp: this.currentHp,
-      gold: this.gold,
-      ki: this.ki,
-      zeon: this.zeon,
-      dotes: this.activeEffects as any,
-      isBleeding: this.isBleeding,
-      bleedingDamage: this.bleedingDamage,
-      currentFatigue: this.currentFatigue,
-      maxFatigue: this.maxFatigue,
-      isChanneling: this.isChanneling,
-      channeledZeon: this.channeledZeon,
-      targetSpellId: this.targetSpellId,
-      reloadTurnsLeft: this.reloadTurnsLeft,
-      martialStyles: this.martialStyles as any,
-      level: this.level,
-      category: this.category,
-      totalDP: this.totalDP,
-      spentDP: this.spentDP,
-      dpDistribution: this.dpDistribution,
-      strength: this.strength,
-      dexterity: this.dexterity,
-      agility: this.agility,
-      constitution: this.constitution,
-      intelligence: this.intelligence,
-      power: this.power,
-      willpower: this.willpower,
-      perception: this.perception,
-      appearance: this.appearance,
-      size: this.getSize(),
-      nephilimType: this.nephilimType,
-      hasInhumanity: this.hasInhumanity,
-      hasZen: this.hasZen,
-      isDead: this.isDead
-    };
-  }
 }

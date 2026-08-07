@@ -1,27 +1,92 @@
-import { Character, CharacterData } from '../domain/Character';
+import { Character, CharacterData, ActiveEffect, Item } from '../domain/Character';
+
+/**
+ * Represents the flat structure returned by Prisma for persistence.
+ * This interface documents exactly what fields go to/from the database.
+ */
+export interface PrismaCharacterData {
+  hp: number;
+  gold: number;
+  ki: number;
+  zeon: number;
+  dotes: ActiveEffect[];
+  kiAbilities: string[];
+  baseResistances: {
+    FIL: number;
+    CON: number;
+    PEN: number;
+    CAL: number;
+    ELE: number;
+    FRI: number;
+    ENE: number;
+  };
+  isBleeding: boolean;
+  bleedingDamage: number;
+  currentFatigue: number;
+  maxFatigue: number;
+  isChanneling: boolean;
+  channeledZeon: number;
+  targetSpellId: string | null;
+  reloadTurnsLeft: number;
+  martialStyles: string[];
+  level: number;
+  category: string;
+  totalDP: number;
+  spentDP: number;
+  dpDistribution: string;
+  strength: number;
+  dexterity: number;
+  agility: number;
+  constitution: number;
+  intelligence: number;
+  power: number;
+  willpower: number;
+  perception: number;
+  appearance: number;
+  size: number;
+  nephilimType: string | null;
+  hasInhumanity: boolean;
+  hasZen: boolean;
+  isDead: boolean;
+}
 
 /**
  * Maps between Prisma database records and domain Character objects.
  * Keeps the domain layer clean of infrastructure concerns.
+ *
+ * This is the ONLY place where Prisma data shapes are converted
+ * to/from the domain model.
  */
 export class CharacterMapper {
   /**
-   * Converts a Prisma character record to a domain Character instance.
+   * Converts a raw database record (from Prisma) into a domain Character.
+   * Handles JSON parsing of serialized fields and inventory hydration.
    */
   static toDomain(prismaRecord: Record<string, unknown>): Character {
     return new Character(prismaRecord as unknown as CharacterData);
   }
 
   /**
-   * Converts a domain Character to a Prisma-compatible data object for persistence.
+   * Converts a domain Character into a flat object suitable for Prisma update.
+   * Serializes complex fields (resistances, effects, abilities) as needed.
    */
-  static toPrisma(character: Character): Record<string, unknown> {
+  static toPrisma(character: Character): PrismaCharacterData {
     return {
       hp: character.currentHp,
       gold: character.gold,
       ki: character.ki,
       zeon: character.zeon,
       dotes: character.activeEffects,
+      kiAbilities: character.kiAbilities,
+      baseResistances: {
+        FIL: character.baseResistances.FIL,
+        CON: character.baseResistances.CON,
+        PEN: character.baseResistances.PEN,
+        CAL: character.baseResistances.CAL,
+        ELE: character.baseResistances.ELE,
+        FRI: character.baseResistances.FRI,
+        ENE: character.baseResistances.ENE,
+      },
       isBleeding: character.isBleeding,
       bleedingDamage: character.bleedingDamage,
       currentFatigue: character.currentFatigue,
@@ -49,7 +114,7 @@ export class CharacterMapper {
       nephilimType: character.nephilimType,
       hasInhumanity: character.hasInhumanity,
       hasZen: character.hasZen,
-      isDead: character.isDead
+      isDead: character.isDead,
     };
   }
 }
