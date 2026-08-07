@@ -8,7 +8,7 @@ import type { KiAbilityDef } from '../config/kiRegistry';
 import { Button } from './ui/button';
 
 // Custom Node for Ki Abilities (Constellation Style)
-const KiAbilityNode = ({ data }: { data: Record<string, any> }) => {
+const KiAbilityNode = ({ data }: { data: Record<string, unknown> }) => {
   const { ability, bought, available, active, isSelected } = data;
   
   let ringStyle = "border-gray-700 shadow-none";
@@ -82,7 +82,7 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
     const kiAbilities = character.kiAbilities || [];
     const activeEffects = character.activeEffects || [];
     const hasAbility = (id: string) => kiAbilities.includes(id);
-    const isAbilityActive = (id: string) => activeEffects.some((e: Record<string, any>) => e.id === `ki_${id}`);
+    const isAbilityActive = (id: string) => activeEffects.some((e: Record<string, unknown>) => e.id === `ki_${id}`);
     const canBuy = (ability: KiAbilityDef) => {
       if (hasAbility(ability.id)) return false;
       return ability.prerequisites.every(p => hasAbility(p));
@@ -107,7 +107,7 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
     const edges: Edge[] = [];
     
     // Agrupar nodos por profundidad para centrarlos correctamente
-    const nodesPerDepth: Record<number, any[]> = {};
+    const nodesPerDepth: Record<number, KiAbilityDef[]> = {};
     Object.values(KI_ABILITIES_DAG).forEach(ability => {
       const d = depths[ability.id];
       if (!nodesPerDepth[d]) nodesPerDepth[d] = [];
@@ -167,7 +167,7 @@ export const KiTree: React.FC<KiTreeProps> = ({ characterId }) => {
   const selectedAbility = selectedAbilityId ? KI_ABILITIES_DAG[selectedAbilityId] : null;
   const isBought = selectedAbility ? character.kiAbilities?.includes(selectedAbility.id) : false;
   const isAvailable = selectedAbility ? selectedAbility.prerequisites.every(p => character.kiAbilities?.includes(p)) && !isBought : false;
-  const isActive = selectedAbility ? character.activeEffects?.some((e: Record<string, any>) => e.id === `ki_${selectedAbility.id}`) : false;
+  const isActive = selectedAbility ? character.activeEffects?.some((e: Record<string, unknown>) => e.id === `ki_${selectedAbility.id}`) : false;
 
   return (
     <div className="flex h-[calc(100vh-160px)] min-h-[500px] w-full bg-[#0a0b0e] border border-[#2a253a] rounded-lg overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,0.9)] relative">

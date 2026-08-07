@@ -183,7 +183,9 @@ export function PlayerView() {
       if (!parsedDp.vias) parsedDp.vias = { FUEGO: 0, AGUA: 0 };
       if (!parsedDp.stats) parsedDp.stats = { ataque: 0, esquiva: 0, parada: 0 };
     }
-  } catch(e) {}
+  } catch(e) { 
+    console.error('Error parsing dpDistribution', e); 
+  }
 
   // [OPTIMIZACIÓN]: useMemo para derivar las vías mágicas del DP.
   // Dependencias: parsedDp.vias.FUEGO, parsedDp.vias.AGUA (evita re-evaluación si el DP general cambia pero no las vías).
@@ -204,7 +206,7 @@ export function PlayerView() {
   // Dependencias: currentVias (solo se recalcula si cambian las vías mágicas).
   const unlockedSpells = useMemo(() => Object.values(MAGIC_SPELLS_REGISTRY).filter(spell => {
     const reqLevel = spell.requiredLevel;
-    // @ts-ignore
+    // @ts-expect-error: Dynamic indexing by via
     return currentVias[spell.via] >= reqLevel;
   }), [currentVias]);
 
@@ -282,7 +284,7 @@ export function PlayerView() {
   // Dependencias: character.inventoryItems (para extraer el arma) y el action de declareAttack del store.
   const handleDeclareAttack = useCallback((targetId: string, totalAttack: number) => {
     // Tomamos el daño base del arma equipada o puño
-    const equippedWeapon = character.inventoryItems?.find((i: Record<string, any>) => i.equipped && i.item.type === 'WEAPON')?.item;
+    const equippedWeapon = character.inventoryItems?.find((i: Record<string, unknown>) => i.equipped && i.item?.type === 'WEAPON')?.item;
     const baseDamage = equippedWeapon?.baseDamage || 10;
     const damageType = equippedWeapon?.modifiers ? Object.keys(JSON.parse(equippedWeapon.modifiers))[0] : 'CON';
 
@@ -438,7 +440,7 @@ export function PlayerView() {
                       size="sm" 
                       variant="destructive" 
                       className="h-6 text-[10px] bg-red-900/80 hover:bg-red-800 btn-piedra-runica text-red-200 border-red-900"
-                      onClick={() => useCombatStore.getState().stopChanneling(CHARACTER_ID!)}
+                      onClick={() => useCombatStore.getState().stopChanneling(CHARACTER_ID)}
                     >
                       Detener Canalización
                     </Button>
@@ -447,7 +449,7 @@ export function PlayerView() {
                   <Button 
                     size="sm" 
                     className="w-full h-7 text-[10px] btn-piedra-runica bg-gradient-to-b from-purple-950 to-black hover:from-purple-900 hover:to-black text-purple-200 border border-purple-900 uppercase tracking-widest shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10"
-                    onClick={() => useCombatStore.getState().startChanneling(CHARACTER_ID!, 'spell_custom')}
+                    onClick={() => useCombatStore.getState().startChanneling(CHARACTER_ID, 'spell_custom')}
                   >
                     Empezar a Canalizar
                   </Button>
@@ -482,7 +484,7 @@ export function PlayerView() {
                   size="sm" 
                   className="flex-grow h-6 text-[9px] btn-piedra-runica bg-gradient-to-b from-blue-950 to-black hover:from-blue-900 hover:to-black border border-blue-900 text-blue-200 uppercase tracking-widest rounded shadow-[0_2px_5px_rgba(0,0,0,0.8)] relative z-10"
                   onClick={() => {
-                    useCombatStore.getState().spendFatigue(CHARACTER_ID!, fatigueToSpend);
+                    useCombatStore.getState().spendFatigue(CHARACTER_ID, fatigueToSpend);
                   }}
                   disabled={(character.currentFatigue ?? 5) < fatigueToSpend}
                 >
@@ -502,7 +504,7 @@ export function PlayerView() {
                     const level = prompt("Ingresa el nivel de fallo psíquico (Puntos de fatiga a perder):", "1");
                     const parsed = parseInt(level || "0");
                     if (!isNaN(parsed) && parsed > 0) {
-                      useCombatStore.getState().reportPsychicFailure(CHARACTER_ID!, parsed);
+                      useCombatStore.getState().reportPsychicFailure(CHARACTER_ID, parsed);
                     }
                   }}
                 >
@@ -546,7 +548,7 @@ export function PlayerView() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   {character.inventory && Object.values(character.inventory).length > 0 ? (
-                    Object.values(character.inventory).map((item: Record<string, any>) => (
+                    Object.values(character.inventory).map((item: Record<string, unknown>) => (
                       <div key={item.id} className="relative bg-[#161411] p-1.5 rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.9)] border border-[#111]">
                         {/* Marco exterior metálico */}
                         <div className="border-[3px] border-[#3a2b1c] rounded-sm p-1 shadow-[inset_0_0_10px_rgba(0,0,0,1)] bg-[#2a2215]">
@@ -642,7 +644,7 @@ export function PlayerView() {
                                   id: shopItem.id, 
                                   name: shopItem.name, 
                                   quantity: 1, 
-                                  type: shopItem.type as any, 
+                                  type: shopItem.type, 
                                   equipped: false,
                                   modifiers: shopItem.mods 
                                 }, shopItem.cost)}
@@ -747,7 +749,7 @@ export function PlayerView() {
                          parada: currentStats.parada + localSpend.physical.parada
                        }
                      };
-                     useCombatStore.getState().gmOverrideStats(CHARACTER_ID!, {
+                     useCombatStore.getState().gmOverrideStats(CHARACTER_ID, {
                        dpDistribution: JSON.stringify(mergedDp),
                        spentDP: character.spentDP + totalSpentThisLevel
                      });
@@ -804,7 +806,7 @@ export function PlayerView() {
                 
                 <div className="py-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent pr-2">
                   {character.activeEffects && character.activeEffects.length > 0 ? (
-                    character.activeEffects.map((effect: Record<string, any>) => (
+                    character.activeEffects.map((effect: Record<string, unknown>) => (
                       <div key={effect.id} className="text-sm p-3 bg-gradient-to-r from-[#2a0808] to-[#1a0505] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-3 flex flex-col gap-2 relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
                         <div className="relative z-10 flex items-center justify-between">
@@ -1015,7 +1017,6 @@ export function PlayerView() {
       {/* MODAL DE ARMA ROTA */}
       {weaponShatteredEvent && weaponShatteredEvent.characterId === myCharacterId && (
         <WeaponShatteredModal event={weaponShatteredEvent} onDismiss={clearWeaponShattered} />
-      )}
       )}
 
       </div>

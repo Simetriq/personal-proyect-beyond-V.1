@@ -51,7 +51,7 @@ export const GameMasterDashboard: React.FC = () => {
             <p className="text-sm">No hay jugadores distribuyendo puntos de experiencia en este momento.</p>
           </div>
         ) : (
-          Object.values(progressionDrafts).map((draft: Record<string, any>) => {
+          Object.values(progressionDrafts).map((draft: Record<string, unknown>) => {
             const hasChanges = draft.totalSpentDP > 0;
             
             return (

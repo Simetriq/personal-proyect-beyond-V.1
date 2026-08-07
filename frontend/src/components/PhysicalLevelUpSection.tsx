@@ -48,7 +48,7 @@ export const PhysicalLevelUpSection: React.FC<PhysicalSectionProps> = ({
       <div className="mb-6 bg-slate-950 p-3 rounded border border-slate-800">
         <div className="flex justify-between text-xs mb-1">
           <span className="text-slate-400">Límite de Categoría (Combate):</span>
-          <span className={`${totalProvisionalCombatDP > maxCombatDP ? 'text-red-400 font-bold' : 'text-slate-300'}`}>
+          <span className={totalProvisionalCombatDP > maxCombatDP ? 'text-red-400 font-bold' : 'text-slate-300'}>
             {totalProvisionalCombatDP} / {maxCombatDP} PD
           </span>
         </div>

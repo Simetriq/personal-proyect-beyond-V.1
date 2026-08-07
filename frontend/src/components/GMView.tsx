@@ -12,7 +12,7 @@ import { CombatCalculator } from "./CombatCalculator";
 import { DiceRoller } from "./ui/DiceRoller";
 import { GameMasterDashboard } from "./GameMasterDashboard";
 
-function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: Record<string, any>, combatStateData: Record<string, any>, gmUpdateCharacter: Function, applyEffect: Function, isActiveTurn: boolean, removeNpc: Function }) {
+function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect, isActiveTurn, removeNpc }: { char: Record<string, unknown>, combatStateData: Record<string, unknown>, gmUpdateCharacter: Function, applyEffect: Function, isActiveTurn: boolean, removeNpc: Function }) {
   const [hp, setHp] = useState(char.hp);
   const [gold, setGold] = useState(char.gold);
   const [isBleeding, setIsBleeding] = useState(false);
@@ -88,7 +88,7 @@ function GMCharacterRow({ char, combatStateData, gmUpdateCharacter, applyEffect,
                 </DialogHeader>
                 
                 <div className="py-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#4a3b2c] scrollbar-track-transparent pr-2">
-                  {char.activeEffects.map((effect: Record<string, any>) => (
+                  {(char.activeEffects as Record<string, unknown>[]).map((effect: Record<string, unknown>) => (
                     <div key={effect.id} className="text-sm p-3 bg-gradient-to-r from-[#2a0808] to-[#1a0505] rounded border border-red-900/80 text-red-200 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] mb-3 flex flex-col gap-2 relative overflow-hidden">
                       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30 pointer-events-none"></div>
                       <div className="relative z-10 flex items-center justify-between">
@@ -277,7 +277,7 @@ function AddEnemyModal({ spawnNpc, campaignId }: { spawnNpc: Function, campaignI
               {Object.keys(ta).map((key) => (
                 <div key={key} className="flex flex-col gap-1 items-center">
                   <label className="text-[10px] text-[#8b7355] font-serif uppercase tracking-wider">{key}</label>
-                  <Input type="number" value={(ta as any)[key]} onChange={(e) => setTa({...ta, [key]: e.target.value})} className="h-8 text-center text-xs border-[#3a2b1c] bg-[#0a0806] text-gray-200" />
+                  <Input type="number" value={ta[key as keyof typeof ta]} onChange={(e) => setTa({...ta, [key]: e.target.value})} className="h-8 text-center text-xs border-[#3a2b1c] bg-[#0a0806] text-gray-200" />
                 </div>
               ))}
             </div>

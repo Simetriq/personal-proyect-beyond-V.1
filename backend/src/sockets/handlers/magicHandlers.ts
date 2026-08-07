@@ -8,7 +8,7 @@ import { AccumulateZeonSchema } from '../../validators/socketPayloads';
 export function registerMagicHandlers(ctx: HandlerContext) {
   const { socket, roomState, io } = ctx;
 
-  socket.on('combat:toggle_magic_accumulation', safeHandler(socket, async (payload: any) => {
+  socket.on('combat:toggle_magic_accumulation', safeHandler(socket, async (payload: { roomId: string; characterId: string }) => {
     const parsed = AccumulateZeonSchema.safeParse(payload);
     if (!parsed.success) {
       socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
@@ -58,7 +58,7 @@ export function registerMagicHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:submit_secret_log', safeHandler(socket, (data: { roomId: string, logEntry: any }) => {
+  socket.on('combat:submit_secret_log', safeHandler(socket, (data: { roomId: string, logEntry: Record<string, unknown> }) => {
     const { roomId, logEntry } = data;
     const publicLog = {
       ...logEntry,

@@ -90,7 +90,7 @@ function applyManeuverModifiers(modifiers: CombatModifiers): { attackAdjust: num
     attackAdjust += AIMED_ATTACK_PENALTIES[modifiers.aimedLocation as keyof typeof AIMED_ATTACK_PENALTIES];
   }
   if (modifiers.coverage && modifiers.coverage in COVERAGE_PENALTIES) {
-    attackAdjust += COVERAGE_PENALTIES[modifiers.coverage as keyof typeof COVERAGE_PENALTIES];
+    attackAdjust += COVERAGE_PENALTIES[modifiers.coverage];
   }
   if (modifiers.burnedFatigueAttack) {
     attackAdjust += modifiers.burnedFatigueAttack * FATIGUE_BONUS_PER_LEVEL;
@@ -209,7 +209,7 @@ export function resolveAttack(
   const diff = finalAttackRoll - finalDefenseRoll;
   
   if (diff < 0) {
-    let rawBonus = Math.floor(Math.abs(diff) / 2);
+    const rawBonus = Math.floor(Math.abs(diff) / 2);
     let counterAttackBonus = Math.floor(rawBonus / 5) * 5;
     if (counterAttackBonus > MAX_COUNTER_BONUS) counterAttackBonus = MAX_COUNTER_BONUS;
     

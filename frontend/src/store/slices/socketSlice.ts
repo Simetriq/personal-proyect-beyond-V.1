@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { io } from 'socket.io-client';
-import { CombatStore, DiceRoll, CombatState, CombatLogEntry } from '../types';
+import { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character } from '../types';
 import { TurnTracker } from '../../../backend/src/types/combat';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
@@ -56,7 +56,7 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
             temporaryShield: data.temporaryShield !== undefined ? (data.temporaryShield as number) : state.characters[data.characterId as string]?.temporaryShield,
             currentInitiative: data.currentInitiative !== undefined ? (data.currentInitiative as number) : state.characters[data.characterId as string]?.currentInitiative,
             kiAbilities: (data.kiAbilities as string[]) || state.characters[data.characterId as string]?.kiAbilities || [],
-            state: data.state as any,
+            state: data.state as Character['state'],
             currentFatigue: data.currentFatigue !== undefined ? (data.currentFatigue as number) : state.characters[data.characterId as string]?.currentFatigue,
             maxFatigue: data.maxFatigue !== undefined ? (data.maxFatigue as number) : state.characters[data.characterId as string]?.maxFatigue,
             isBleeding: data.isBleeding !== undefined ? (data.isBleeding as boolean) : state.characters[data.characterId as string]?.isBleeding,
@@ -97,15 +97,15 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
       set({ weaponShatteredEvent: data });
     });
 
-    socket.on('combat:critical_hit', (data: any) => {
+    socket.on('combat:critical_hit', (data: { defenderId: string; level: number; location: string; instantKill: boolean }) => {
       set({ criticalHitEvent: data });
     });
 
-    socket.on('combat:fumble_occurred', (data: any) => {
+    socket.on('combat:fumble_occurred', (data: { characterId: string; level: number; type: string }) => {
       set({ fumbleEvent: data });
     });
 
-    socket.on('combat:room_spells_updated', (data: any) => {
+    socket.on('combat:room_spells_updated', (data: Record<string, unknown>[]) => {
       set({ persistentSpells: data });
     });
 

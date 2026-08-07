@@ -31,7 +31,7 @@ export class CharacterRepository {
           quantity: inv.quantity,
           type: inv.item.type as Item['type'],
           equipped: inv.equipped,
-          modifiers: inv.item.modifiers ? JSON.parse(inv.item.modifiers as string) : undefined
+          modifiers: inv.item.modifiers ? JSON.parse(inv.item.modifiers) : undefined
         };
       }
     }

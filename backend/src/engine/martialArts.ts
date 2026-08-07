@@ -34,7 +34,7 @@ export function calculateCombinedStyle(equippedStylesIds: string[]): {
   let damage = 10; // Default unarmed damage
   let attackBonus = 0;
   let defenseBonus = 0;
-  let freeManeuvers: Set<string> = new Set();
+  const freeManeuvers: Set<string> = new Set();
 
   for (const styleId of equippedStylesIds) {
     const style = MARTIAL_STYLES_REGISTRY[styleId];

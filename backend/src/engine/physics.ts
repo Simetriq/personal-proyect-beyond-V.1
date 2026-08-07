@@ -37,6 +37,6 @@ export function enforceExistentialBarrier(value: number, character: Character): 
  */
 export function getMovementType(baseAgility: number, character: Character): number {
   // Simplified base mapping for Movement Type
-  let movementType = baseAgility; 
+  const movementType = baseAgility; 
   return enforceExistentialBarrier(movementType, character);
 }

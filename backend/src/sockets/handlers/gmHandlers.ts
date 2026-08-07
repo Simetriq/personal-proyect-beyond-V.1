@@ -7,7 +7,7 @@ import { GMCommandSchema } from '../../validators/socketPayloads';
 export function registerGMHandlers(ctx: HandlerContext) {
   const { socket, io, roomState, prisma } = ctx;
 
-  socket.on('combat:execute_gm_command', safeHandler(socket, async (payload: any) => {
+  socket.on('combat:execute_gm_command', safeHandler(socket, async (payload: { roomId: string; commandString: string }) => {
     const parsed = GMCommandSchema.safeParse(payload);
     if (!parsed.success) {
       socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });

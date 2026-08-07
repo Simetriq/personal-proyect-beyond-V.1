@@ -61,7 +61,7 @@ export class ActivateKiAbilityCommand implements ICommand {
 
     // Aplicar estrategia
     const strategy = KiStrategyFactory.getStrategy(this.ability.effectType);
-    strategy.apply(this.character, this.ability as any);
+    strategy.apply(this.character, this.ability);
     
     return true;
   }
@@ -72,7 +72,7 @@ export class DeactivateKiAbilityCommand implements ICommand {
 
   execute(): boolean {
     const strategy = KiStrategyFactory.getStrategy(this.ability.effectType);
-    strategy.remove(this.character, this.ability as any);
+    strategy.remove(this.character, this.ability);
     
     // Necesitamos recalcular las resistencias si era buf de TA
     // @ts-ignore

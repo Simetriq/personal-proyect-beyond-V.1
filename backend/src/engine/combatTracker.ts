@@ -35,7 +35,7 @@ export class CombatTracker {
 
   addPendingCounter(defenderId: string, onTimeout: () => void) {
     if (this.pendingCounters.has(defenderId)) {
-      clearTimeout(this.pendingCounters.get(defenderId)!);
+      clearTimeout(this.pendingCounters.get(defenderId));
     }
     const timeout = setTimeout(() => {
       this.pendingCounters.delete(defenderId);
@@ -46,7 +46,7 @@ export class CombatTracker {
 
   resolvePendingCounter(defenderId: string): boolean {
     if (this.pendingCounters.has(defenderId)) {
-      clearTimeout(this.pendingCounters.get(defenderId)!);
+      clearTimeout(this.pendingCounters.get(defenderId));
       this.pendingCounters.delete(defenderId);
       return true;
     }

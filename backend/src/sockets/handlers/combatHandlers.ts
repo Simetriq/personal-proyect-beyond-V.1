@@ -12,7 +12,7 @@ import { AttackRequestSchema, DefenseRequestSchema } from '../../validators/sock
 export function registerCombatHandlers(ctx: HandlerContext) {
   const { socket, io, roomState } = ctx;
 
-  socket.on('combat:declare_attack', safeHandler(socket, async (payload: any) => {
+  socket.on('combat:declare_attack', safeHandler(socket, async (payload: { campaignId: string; attackerId: string; targetId?: string; defenderId?: string; attackRoll: number; baseDamage: number; damageType: string; modifiers?: Record<string, unknown> }) => {
     const parsed = AttackRequestSchema.safeParse(payload);
     if (!parsed.success) {
       socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });
@@ -38,7 +38,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     io.to('gm_room').emit('gm:console_success', `${attacker.name} está atacando a ID:${data.targetId} (Tirada: ${data.attackRoll})`);
   }));
 
-  socket.on('combat:submit_defense', safeHandler(socket, async (payload: any) => {
+  socket.on('combat:submit_defense', safeHandler(socket, async (payload: { combatInstanceId: string; defenseType: 'BLOCK' | 'DODGE'; defenseRoll: number }) => {
     const parsed = DefenseRequestSchema.safeParse(payload);
     if (!parsed.success) {
       socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });

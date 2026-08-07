@@ -55,7 +55,7 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('use_item', safeHandler(socket, async (payload: any) => {
+  socket.on('use_item', safeHandler(socket, async (payload: { campaignId: string; characterId: string; itemId: string }) => {
     const parsed = UseItemSchema.safeParse(payload);
     if (!parsed.success) {
       socket.emit('error', { message: 'Payload inválido', details: parsed.error.flatten() });

@@ -1,10 +1,11 @@
 import { StateCreator } from 'zustand';
 import { CombatStore, DamageType } from '../types';
-
+import { CombatLogEntry } from '../../types/combatLog';
+import { TurnTracker } from '../../../../backend/src/types/combat';
 export interface CombatSlice {
-  addLog: (log: any) => void;
+  addLog: (log: CombatLogEntry) => void;
   clearLogs: () => void;
-  setTurnTracker: (tracker: any) => void;
+  setTurnTracker: (tracker: TurnTracker) => void;
   clearCriticalHit: () => void;
   clearFumbleEvent: () => void;
   clearWeaponShattered: () => void;
