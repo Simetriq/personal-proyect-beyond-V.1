@@ -1,6 +1,5 @@
 import React from 'react';
 import { useCombatStore } from '../store/combatStore';
-import { socket } from '../store/combatStore'; // Assuming socket is exported or we can just get it from the store if it's there. Actually, the user says `import { socket } from '../services/socket';` but the project uses `useCombatStore.getState().socket` or `socket` emitted. Wait, let me adjust it to just use `useCombatStore().socket` or export it. In this app, socket is inside the store.
 
 interface TurnOrderTrackerProps {
   roomId: string;

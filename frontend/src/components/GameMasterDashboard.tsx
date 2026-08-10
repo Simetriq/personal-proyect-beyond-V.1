@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useCombatStore } from '../store/combatStore';
 import { TurnOrderTracker } from './TurnOrderTracker';
-import { AlteredState, STATE_MODIFIERS } from '../types/combat';
+import type { AlteredState } from '../types/combat';
+import { STATE_MODIFIERS } from '../types/combat';
 
 export const GameMasterDashboard: React.FC = () => {
   const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp, turnTracker, campaignId, executeGMCommand, toggleCharacterState } = useCombatStore();

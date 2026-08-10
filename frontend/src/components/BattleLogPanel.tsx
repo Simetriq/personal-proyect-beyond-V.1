@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { CombatLogEntry } from '../types/combatLog';
+import type { CombatLogEntry } from '../types/combatLog';
 
 interface BattleLogPanelProps {
   logs: CombatLogEntry[];

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCombatStore } from '../store/combatStore';
-import { MagicData, PersistentSpell } from '../types/combat';
+import type { MagicData, PersistentSpell } from '../types/combat';
 
 interface MagicConsoleProps {
   roomId: string;
