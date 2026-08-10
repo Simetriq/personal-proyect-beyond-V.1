@@ -1,5 +1,20 @@
+export interface CombatantTurn {
+  combatantId: string;
+  name: string;
+  initiativeTotal: number;
+  isNPC: boolean;
+  hasActed: boolean;
+  accumulatingTurns: number;
+}
+
+export interface TurnTracker {
+  isActive: boolean;
+  currentRound: number;
+  currentTurnIndex: number;
+  order: CombatantTurn[];
+}
+
 import { Socket } from 'socket.io-client';
-import type { TurnTracker } from '../components/TurnOrderTracker';
 import type { CombatLogEntry } from '../components/BattleLogPanel';
 
 export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';

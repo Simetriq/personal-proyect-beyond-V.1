@@ -1,7 +1,6 @@
 import { StateCreator } from 'zustand';
 import { io } from 'socket.io-client';
-import { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character } from '../types';
-import { TurnTracker } from '../../../backend/src/types/combat';
+import { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character, TurnTracker } from '../types';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
 
@@ -36,6 +35,7 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
       }));
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     socket.on('character_updated', (data: any) => {
       console.log('Personaje actualizado:', data);
       set((state) => ({
@@ -124,6 +124,7 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
       console.log(`¡Contraataque de ${data.defenderId} confirmado!`);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     socket.on('gm:update_player_draft', (draft: any) => {
       set((state) => ({
         progressionDrafts: {
