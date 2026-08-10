@@ -3,20 +3,29 @@ import { safeHandler } from '../middleware/errorHandler';
 import { emitSystemLog } from './utils';
 import { processTurnMagicMaintenance } from './magicHandlers';
 import crypto from 'crypto';
-import { getCombatTracker } from '../../engine/combatTracker';
-import { broadcastCombatState, loadCharacter, saveCharacter, broadcastCharacterUpdate } from './utils';
+import { getCombatTracker, getRoomState } from '../../engine/combatTracker';
+import { loadCharacter, saveCharacter, broadcastCharacterUpdate, broadcastCombatState } from './utils';
+import { applyActiveModifiers } from '../../engine/combatResolution';
 
 export function registerTurnHandlers(ctx: HandlerContext) {
   const { socket, io, roomState, prisma } = ctx;
 
-  socket.on('combat:submit_initiative_v2', safeHandler(socket, (data: { roomId: string, combatantId: string, name: string, roll: number, baseModifier: number, isNPC: boolean, accumulatingTurns: boolean }) => {
+  socket.on('combat:submit_initiative_v2', safeHandler(socket, async (data: { roomId: string, combatantId: string, name: string, roll: number, baseModifier: number, isNPC: boolean, accumulatingTurns: boolean }) => {
     const { roomId, combatantId, name, roll, baseModifier, isNPC, accumulatingTurns } = data;
     if (!roomState.activeTurnTrackers[roomId]) {
       roomState.activeTurnTrackers[roomId] = { isActive: true, currentRound: 1, currentTurnIndex: 0, order: [] };
     }
 
     const tracker = roomState.activeTurnTrackers[roomId];
-    const initiativeTotal = roll + baseModifier;
+    let finalModifier = baseModifier;
+
+    const character = await loadCharacter(ctx, roomId, combatantId);
+    if (character && character.activeEffects) {
+      const { initiativeMod } = applyActiveModifiers(character.activeEffects);
+      finalModifier += initiativeMod;
+    }
+
+    const initiativeTotal = roll + finalModifier;
 
     tracker.order = tracker.order.filter(c => c.combatantId !== combatantId);
 

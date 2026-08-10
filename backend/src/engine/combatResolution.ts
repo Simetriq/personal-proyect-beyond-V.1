@@ -13,7 +13,7 @@ import {
   CriticalLocation
 } from '../constants/combat';
 import { InvalidCombatInputError } from '../errors/CombatError';
-
+import type { AppliedEffect } from '../types/combat';
 export type RandomFn = () => number;
 
 export interface CombatResolutionResult {
@@ -291,4 +291,33 @@ export function resolveAttack(
     spellsApplied: modifiers?.spellsApplied,
     customNarrative
   };
+}
+
+/**
+ * Recorre todas las condiciones activas (efectos/estados) y calcula el sumatorio
+ * de los modificadores para un target específico ('attack', 'defense', 'hp', etc.).
+ * @param activeEffects Lista de efectos aplicados al personaje
+ * @returns Objeto con los modificadores netos a aplicar en el combate
+ */
+export function applyActiveModifiers(activeEffects: AppliedEffect[]): {
+  attackMod: number;
+  defenseMod: number;
+  initiativeMod: number;
+} {
+  let attackMod = 0;
+  let defenseMod = 0;
+  let initiativeMod = 0;
+
+  for (const effect of activeEffects) {
+    for (const mod of effect.modifiers) {
+      if (mod.operation === 'add') {
+        if (mod.target === 'attack') attackMod += mod.value;
+        if (mod.target === 'defense') defenseMod += mod.value;
+        if (mod.target === 'initiative') initiativeMod += mod.value;
+      }
+      // 'multiply' y 'tick' no aplican directamente a estas stats base de forma sumativa
+    }
+  }
+
+  return { attackMod, defenseMod, initiativeMod };
 }

@@ -1,7 +1,7 @@
 import { HandlerContext } from '../types';
 import { safeHandler } from '../middleware/errorHandler';
 import { getCombatTracker } from '../../engine/combatTracker';
-import { resolveAttack } from '../../engine/combatResolution';
+import { resolveAttack, applyActiveModifiers } from '../../engine/combatResolution';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
 import { CombatLogEntry } from '../../types/combatLog';
 import { PersistentSpell } from '../../types/combat';
@@ -87,6 +87,16 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     let envAttackMod = 0;
     let envDefenseMod = 0;
     const activeSpellsApplied: string[] = [];
+
+    // Apply Active Effects (Buffs/Debuffs)
+    if (attacker.activeEffects) {
+      const attackerMods = applyActiveModifiers(attacker.activeEffects);
+      envAttackMod += attackerMods.attackMod;
+    }
+    if (defender.activeEffects) {
+      const defenderMods = applyActiveModifiers(defender.activeEffects);
+      envDefenseMod += defenderMods.defenseMod;
+    }
 
     const roomSpells = roomState.activePersistentSpells[campaignId] || [];
     roomSpells.forEach((spell: PersistentSpell) => {

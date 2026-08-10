@@ -18,14 +18,7 @@ export interface ItemModifier {
   ENE?: number;
 }
 
-export interface ActiveEffect {
-  id: string;
-  name: string;
-  type: 'SANGRADO' | 'VENENO' | 'PENALIZADOR' | 'BUF_TA' | 'BUF_STAT' | 'ATURDIDO' | 'CEGUERA' | 'PARALISIS' | 'SORPRESA';
-  value: number;
-  durationRounds: number;
-  statName?: string; // Para identificar qué stat afecta (ej. 'FUE', 'DES')
-}
+import { AppliedEffect } from '../types/combat';
 
 export interface Item {
   id: string;
@@ -63,8 +56,8 @@ export interface CharacterData {
     ENE?: number;
   };
   inventory?: Record<string, Item>;
-  dotes?: ActiveEffect[];
-  activeEffects?: ActiveEffect[];
+  dotes?: AppliedEffect[];
+  activeEffects?: AppliedEffect[];
   kiAbilities?: string[];
   isBleeding?: boolean;
   bleedingDamage?: number;
@@ -114,7 +107,7 @@ export class Character {
   public baseResistances: Resistances;
   public resistances: Resistances;
   public inventory: Record<string, Item>; 
-  public activeEffects: ActiveEffect[];
+  public activeEffects: AppliedEffect[];
   public kiAbilities: string[];
   public state: CharacterState;
   
@@ -250,19 +243,19 @@ export class Character {
     this.recalculateResistances();
   }
 
-  public addEffect(effect: ActiveEffect) {
+  public addEffect(effect: AppliedEffect) {
     this.activeEffects.push(effect);
-    if (effect.type === 'BUF_TA') {
-      this.recalculateResistances();
-    }
+    this.recalculateResistances();
   }
 
   public tickEffects(): void {
-    const remainingEffects: ActiveEffect[] = [];
+    const remainingEffects: AppliedEffect[] = [];
 
     for (const effect of this.activeEffects) {
-      if (effect.type === 'SANGRADO' || effect.type === 'VENENO') {
-        this.currentHp -= effect.value;
+      for (const mod of effect.modifiers) {
+        if (mod.operation === 'tick' && mod.target === 'hp') {
+          this.currentHp -= mod.value;
+        }
       }
 
       effect.durationRounds -= 1;

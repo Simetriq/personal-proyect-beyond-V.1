@@ -19,6 +19,23 @@ import type { CombatLogEntry } from '../components/BattleLogPanel';
 
 export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';
 
+export interface EffectModifier {
+  target: 'attack' | 'defense' | 'initiative' | 'hp' | 'damage';
+  operation: 'add' | 'multiply' | 'tick';
+  value: number;
+}
+
+export interface EffectDefinition {
+  id: string;
+  name: string;
+  description: string;
+  modifiers: EffectModifier[];
+}
+
+export interface AppliedEffect extends EffectDefinition {
+  durationRounds: number;
+  sourceId?: string; // e.g., the caster or the item
+}
 export interface DiceRoll {
   characterId: string;
   characterName: string;
@@ -92,7 +109,9 @@ export interface CombatState {
   characterStates: Record<string, CharacterCombatState>;
 }
 
-export interface CombatStore {
+import { EffectSlice } from './slices/effectSlice';
+
+export interface CombatStore extends EffectSlice {
   socket: Socket | null;
   isConnected: boolean;
   hasSynced: boolean;

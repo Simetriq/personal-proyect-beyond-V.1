@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useCombatStore } from '../store/combatStore';
 import { TurnOrderTracker } from './TurnOrderTracker';
-import type { AlteredState } from '../types/combat';
-import { STATE_MODIFIERS } from '../types/combat';
-
+import { AppliedEffect, EffectModifier } from '../store/types';
 export const GameMasterDashboard: React.FC = () => {
-  const { progressionDrafts, setupGMSocketListeners, approveLevelUp, rejectLevelUp, turnTracker, campaignId, executeGMCommand, toggleCharacterState } = useCombatStore();
+  const { progressionDrafts, campaignId, executeGMCommand, applyCustomEffect, turnTracker } = useCombatStore();
   const [commandInput, setCommandInput] = useState('');
+  
+  // Custom Effect Form State
+  const [effectTarget, setEffectTarget] = useState<'attack' | 'defense' | 'initiative' | 'hp' | 'damage'>('attack');
+  const [effectOp, setEffectOp] = useState<'add' | 'multiply' | 'tick'>('add');
+  const [effectValue, setEffectValue] = useState<number>(0);
+  const [effectDuration, setEffectDuration] = useState<number>(5);
+  const [effectName, setEffectName] = useState<string>('Maldición GM');
+
   const combatants = turnTracker?.order || [];
 
   // Inicializar la escucha de sockets del GM al montar el componente
@@ -24,8 +30,17 @@ export const GameMasterDashboard: React.FC = () => {
     setCommandInput('');
   };
 
-  const handleApplyState = (characterId: string, state: AlteredState) => {
-    toggleCharacterState(campaignId || 'camp-1', characterId, state);
+  const handleApplyCustomEffect = (characterId: string) => {
+    const newEffect: Partial<AppliedEffect> = {
+      name: effectName,
+      durationRounds: effectDuration,
+      modifiers: [{
+        target: effectTarget,
+        operation: effectOp,
+        value: Number(effectValue)
+      }]
+    };
+    applyCustomEffect(characterId, newEffect);
   };
 
   return (
@@ -153,29 +168,47 @@ export const GameMasterDashboard: React.FC = () => {
           {/* Grid de Monitoreo Rápido e Inyección de Estados */}
           <div className="space-y-2">
             <h3 className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Inyector Táctico de Estados</h3>
+            
+            {/* Custom Effect Form */}
+            <div className="bg-slate-900 border border-slate-800 p-2 rounded flex flex-col gap-2 mb-2 text-xs">
+              <input type="text" value={effectName} onChange={e => setEffectName(e.target.value)} className="bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700" placeholder="Nombre (ej. Veneno Fuerte)" />
+              <div className="flex gap-2">
+                <select value={effectTarget} onChange={e => setEffectTarget(e.target.value as 'attack' | 'defense' | 'initiative' | 'hp' | 'damage')} className="bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700 flex-1">
+                  <option value="attack">ATK</option>
+                  <option value="defense">DEF</option>
+                  <option value="initiative">INI</option>
+                  <option value="hp">HP</option>
+                  <option value="damage">DAÑO</option>
+                </select>
+                <select value={effectOp} onChange={e => setEffectOp(e.target.value as 'add' | 'multiply' | 'tick')} className="bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700 flex-1">
+                  <option value="add">Sumar</option>
+                  <option value="multiply">Multiplicar</option>
+                  <option value="tick">Por Turno</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <input type="number" value={effectValue} onChange={e => setEffectValue(Number(e.target.value))} className="bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700 flex-1" placeholder="Valor" />
+                <input type="number" value={effectDuration} onChange={e => setEffectDuration(Number(e.target.value))} className="bg-slate-950 text-slate-200 px-2 py-1 rounded border border-slate-700 flex-1" placeholder="Asaltos" />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-purple-900">
               {combatants.map((combatant) => (
-                <div key={combatant.combatantId} className="bg-slate-900 border border-slate-800 p-2 rounded flex flex-col justify-between">
-                  <div className="flex justify-between items-center mb-1">
+                <div key={combatant.combatantId} className="bg-slate-900 border border-slate-800 p-2 rounded flex justify-between items-center">
+                  <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-200 truncate max-w-[120px]">
                       {combatant.name}
                     </span>
-                    <span className="text-[9px] text-slate-500 bg-slate-950 px-1 rounded">
+                    <span className="text-[9px] text-slate-500 bg-slate-950 px-1 rounded w-fit">
                       ID: {combatant.combatantId.substring(0, 4)}...
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {(Object.keys(STATE_MODIFIERS) as AlteredState[]).map((state) => (
-                      <button
-                        key={state}
-                        onClick={() => handleApplyState(combatant.combatantId, state)}
-                        className="text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-tighter bg-purple-950/40 hover:bg-purple-600 hover:text-slate-950 text-purple-400 border border-purple-900/30 rounded transition-all"
-                        title={`INI ${STATE_MODIFIERS[state].initMod} | ATK ${STATE_MODIFIERS[state].attackMod}`}
-                      >
-                        +{STATE_MODIFIERS[state].name}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => handleApplyCustomEffect(combatant.combatantId)}
+                    className="text-[10px] font-bold px-2 py-1 uppercase bg-purple-900 hover:bg-purple-700 text-purple-100 rounded transition-all"
+                  >
+                    Inyectar
+                  </button>
                 </div>
               ))}
               {combatants.length === 0 && (

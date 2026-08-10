@@ -1,7 +1,8 @@
 import { HandlerContext } from '../types';
 import { safeHandler } from '../middleware/errorHandler';
 import { loadCharacter, saveCharacter, broadcastCharacterUpdate, emitSystemLog } from './utils';
-import { ActiveEffect, CharacterData } from '../../domain/Character';
+import { CharacterData } from '../../domain/Character';
+import type { AppliedEffect } from '../../types/combat';
 import { GMCommandSchema } from '../../validators/socketPayloads';
 
 export function registerGMHandlers(ctx: HandlerContext) {
@@ -55,29 +56,34 @@ export function registerGMHandlers(ctx: HandlerContext) {
     }
   }));
 
-  socket.on('combat:toggle_character_state', safeHandler(socket, async (data: { roomId: string, characterId: string, state: string }) => {
-    const { roomId, characterId, state } = data;
-    const character = await loadCharacter(ctx, roomId, characterId);
+  socket.on('apply_custom_effect', safeHandler(socket, async (data: { campaignId: string, characterId: string, effect: Partial<AppliedEffect> }) => {
+    const { campaignId, characterId, effect } = data;
+    const character = await loadCharacter(ctx, campaignId, characterId);
     if (character) {
-      if (!character.activeEffects) character.activeEffects = [];
-      
-      const existingIdx = character.activeEffects.findIndex((e: ActiveEffect) => e.type === state);
-      if (existingIdx >= 0) {
-        character.activeEffects.splice(existingIdx, 1);
-      } else {
-        character.activeEffects.push({
-          id: Math.random().toString(36).substring(7),
-          name: state,
-          type: 'PENALIZADOR', // Fallback type
-          value: 0,
-          durationRounds: 9999
-        });
-      }
+      const newEffect: AppliedEffect = {
+        id: effect.id || Math.random().toString(36).substring(7),
+        name: effect.name || 'Efecto Desconocido',
+        description: effect.description || '',
+        modifiers: effect.modifiers || [],
+        durationRounds: effect.durationRounds || 1
+      };
+      character.addEffect(newEffect);
       await saveCharacter(ctx, character);
-      broadcastCharacterUpdate(ctx, roomId, character);
+      broadcastCharacterUpdate(ctx, campaignId, character);
     }
   }));
 
+  socket.on('remove_custom_effect', safeHandler(socket, async (data: { campaignId: string, characterId: string, effectId: string }) => {
+    const { campaignId, characterId, effectId } = data;
+    const character = await loadCharacter(ctx, campaignId, characterId);
+    if (character && character.activeEffects) {
+      character.activeEffects = character.activeEffects.filter(e => e.id !== effectId);
+      // Forzar recálculo
+      character.recalculateResistances();
+      await saveCharacter(ctx, character);
+      broadcastCharacterUpdate(ctx, campaignId, character);
+    }
+  }));
   socket.on('gm:command_give_dp', safeHandler(socket, async (payload: { playerId: string; amount: number }) => {
     const { playerId, amount } = payload;
 

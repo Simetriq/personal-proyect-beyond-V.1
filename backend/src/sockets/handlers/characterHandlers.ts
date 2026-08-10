@@ -152,6 +152,30 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
     // Legacy support placeholder
   }));
 
+  socket.on('spawn_npc', safeHandler(socket, async (data: { campaignId: string, name: string, maxHp: number, resistances: Record<string, unknown> }) => {
+    const id = `npc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const npcData = {
+      id,
+      name: data.name,
+      max_hp: data.maxHp,
+      hp: data.maxHp,
+      gold: 0,
+      ki: 0,
+      zeon: 0,
+      resistances: data.resistances
+    };
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const npc = new Character(npcData as any);
+    
+    const npcs = getCampaignNpcs(ctx, data.campaignId);
+    npcs.set(npc.id, npc);
+    
+    console.log(`[Event Sourcing] spawn_npc: Added NPC ${npc.name} (${npc.id}). Total NPCs in memory: ${npcs.size}`);
+    
+    broadcastCharacterUpdate(ctx, data.campaignId, npc);
+  }));
+
   socket.on('remove_npc', safeHandler(socket, (data: { campaignId: string, characterId: string }) => {
     if (data.characterId.startsWith('npc_')) {
       getCampaignNpcs(ctx, data.campaignId).delete(data.characterId);

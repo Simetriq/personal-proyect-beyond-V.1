@@ -4,6 +4,7 @@ import { createSocketSlice } from './slices/socketSlice';
 import { createCharacterSlice } from './slices/characterSlice';
 import { createCombatSlice } from './slices/combatSlice';
 import { createMagicSlice } from './slices/magicSlice';
+import { createEffectSlice } from './slices/effectSlice';
 
 export * from './types';
 
@@ -36,4 +37,5 @@ export const useCombatStore = create<CombatStore>((set, get, api) => ({
   ...createCharacterSlice(set, get, api),
   ...createCombatSlice(set, get, api),
   ...createMagicSlice(set, get, api),
+  ...createEffectSlice(set, get, api),
 }));

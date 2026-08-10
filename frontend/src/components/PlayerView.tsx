@@ -812,8 +812,14 @@ export function PlayerView() {
                             {effect.durationRounds} turnos
                           </span>
                         </div>
-                        <div className="relative z-10 text-xs text-red-300/80 italic font-serif">
-                          Recibes {effect.value} puntos de daño vital al final del asalto.
+                        <div className="relative z-10 text-xs text-red-300/80 italic font-serif flex flex-col gap-1">
+                          {effect.description && <span>{effect.description}</span>}
+                          {effect.modifiers?.map((mod: Record<string, unknown>, i: number) => (
+                            <span key={i} className="font-mono text-[10px] bg-red-950/50 px-1 rounded w-fit">
+                              {mod.target === 'attack' ? 'ATK' : mod.target === 'defense' ? 'DEF' : mod.target === 'initiative' ? 'INI' : mod.target === 'hp' ? 'HP' : 'DAÑO'}
+                              {mod.operation === 'add' ? (Number(mod.value) > 0 ? ` +${mod.value}` : ` ${mod.value}`) : mod.operation === 'tick' ? ` ${mod.value}/turno` : ` x${mod.value}`}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     ))
