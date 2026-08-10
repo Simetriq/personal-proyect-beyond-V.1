@@ -26,7 +26,7 @@ export function registerTurnHandlers(ctx: HandlerContext) {
       initiativeTotal,
       isNPC,
       hasActed: false,
-      accumulatingTurns: accumulatingTurns || 0
+      accumulatingTurns: typeof accumulatingTurns === 'number' ? accumulatingTurns : (accumulatingTurns ? 1 : 0)
     });
 
     tracker.order.sort((a, b) => b.initiativeTotal - a.initiativeTotal);
@@ -38,8 +38,9 @@ export function registerTurnHandlers(ctx: HandlerContext) {
     const tracker = roomState.activeTurnTrackers[roomId];
     if (!tracker || !tracker.isActive) return;
 
-    if (tracker.order[tracker.currentTurnIndex]) {
-      tracker.order[tracker.currentTurnIndex].hasActed = true;
+    const currentTurn = tracker.order[tracker.currentTurnIndex];
+    if (currentTurn) {
+      currentTurn.hasActed = true;
     }
 
     tracker.currentTurnIndex += 1;
@@ -105,7 +106,7 @@ export function registerTurnHandlers(ctx: HandlerContext) {
         const state = tracker.characterStates.get(charId);
         const hasActedOrDefended = state ? (state.hasActed || state.isDefensive) : false;
         
-        const baseKiAcc = character.getKiAccumulationBase ? character.getKiAccumulationBase() : 1;
+        const baseKiAcc = 1; // Generic ki accumulation fallback
         const kiToRec = hasActedOrDefended ? Math.ceil(baseKiAcc / 2) : baseKiAcc;
         
         character.ki = (character.ki || 0) + kiToRec;

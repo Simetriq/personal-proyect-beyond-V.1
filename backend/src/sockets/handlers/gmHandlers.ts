@@ -15,12 +15,12 @@ export function registerGMHandlers(ctx: HandlerContext) {
     }
     const { roomId, commandString } = parsed.data;
     const parts = commandString.trim().split(' ');
-    const command = parts[0].toLowerCase();
+    const command = parts[0]?.toLowerCase();
     
     switch (command) {
       case '/give_dp': {
         const [_, targetId, amountStr] = parts;
-        const amount = parseInt(amountStr, 10);
+        const amount = parseInt(amountStr || '0', 10);
         
         if (targetId && !isNaN(amount)) {
           const character = await loadCharacter(ctx, roomId, targetId);
@@ -36,7 +36,7 @@ export function registerGMHandlers(ctx: HandlerContext) {
 
       case '/damage': {
         const [_, targetId, amountStr] = parts;
-        const amount = parseInt(amountStr, 10);
+        const amount = parseInt(amountStr || '0', 10);
         
         if (targetId && !isNaN(amount)) {
           const character = await loadCharacter(ctx, roomId, targetId);
@@ -65,7 +65,13 @@ export function registerGMHandlers(ctx: HandlerContext) {
       if (existingIdx >= 0) {
         character.activeEffects.splice(existingIdx, 1);
       } else {
-        character.activeEffects.push({ type: state, duration: -1 });
+        character.activeEffects.push({
+          id: Math.random().toString(36).substring(7),
+          name: state,
+          type: 'PENALIZADOR', // Fallback type
+          value: 0,
+          durationRounds: 9999
+        });
       }
       await saveCharacter(ctx, character);
       broadcastCharacterUpdate(ctx, roomId, character);
@@ -105,13 +111,13 @@ export function registerGMHandlers(ctx: HandlerContext) {
     socket.emit('gm:console_success', `Inyectados ${amount} PD a ${characterActualizado.name} con éxito.`);
   }));
 
-  socket.on('player:progression_draft', safeHandler(socket, (payload: Record<string, unknown>) => {
+  socket.on('player:progression_draft', safeHandler(socket, (payload: { playerId: string; isOverLimit?: boolean; [key: string]: unknown }) => {
     roomState.activeProgressionDrafts[payload.playerId] = payload;
     socket.to('gm_room').emit('gm:update_player_draft', payload);
   }));
 
   socket.on('gm:approve_level_up', safeHandler(socket, async (playerId: string) => {
-    const draft = roomState.activeProgressionDrafts[playerId];
+    const draft = roomState.activeProgressionDrafts[playerId] as { isOverLimit?: boolean } | undefined;
     if (!draft || draft.isOverLimit) return;
     io.to(playerId).emit('player:progression_approved');
     delete roomState.activeProgressionDrafts[playerId];

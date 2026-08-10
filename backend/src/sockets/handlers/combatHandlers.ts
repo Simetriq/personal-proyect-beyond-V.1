@@ -24,18 +24,22 @@ export function registerCombatHandlers(ctx: HandlerContext) {
     
     const combatInstanceId = `combat_${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
     
+    const targetId = data.targetId || data.defenderId;
+    if (!targetId) return;
+
     roomState.activeCombats[combatInstanceId] = {
       ...data,
+      targetId,
       attackerName: attacker.name
     };
 
-    io.to(data.targetId).emit('combat:defend_requested', {
+    io.to(targetId).emit('combat:defend_requested', {
       combatInstanceId,
       attackerName: attacker.name,
       attackRoll: data.attackRoll
     });
 
-    io.to('gm_room').emit('gm:console_success', `${attacker.name} está atacando a ID:${data.targetId} (Tirada: ${data.attackRoll})`);
+    io.to('gm_room').emit('gm:console_success', `${attacker.name} está atacando a ID:${targetId} (Tirada: ${data.attackRoll})`);
   }));
 
   socket.on('combat:submit_defense', safeHandler(socket, async (payload: { combatInstanceId: string; defenseType: 'BLOCK' | 'DODGE'; defenseRoll: number }) => {
@@ -67,7 +71,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
 
     let acrobaticsBonus = 0;
     if (attacker.currentInitiative !== null && defender.currentInitiative !== null) {
-      if (attacker.currentInitiative - defender.currentInitiative > 50 && (attacker.secondarySkills?.acrobacias || 0) >= 50) {
+      if (attacker.currentInitiative - defender.currentInitiative > 50 && (attacker.secondarySkills?.['acrobacias'] || 0) >= 50) {
         acrobaticsBonus = 10;
         finalAttackRoll += acrobaticsBonus;
       }
@@ -147,27 +151,30 @@ export function registerCombatHandlers(ctx: HandlerContext) {
       }
 
       if (result.isCritical) {
-        let stateName = 'critical_torso';
-        if (result.criticalLocation === 'Cabeza') stateName = 'critical_head';
-        else if (result.criticalLocation === 'Brazo') stateName = 'critical_arm';
-        else if (result.criticalLocation === 'Pierna') stateName = 'critical_leg';
+        let stateName = 'Trauma en el Torso';
+        if (result.criticalLocation === 'CABEZA') stateName = 'Trauma Craneal';
+        else if (result.criticalLocation === 'BRAZO') stateName = 'Brazo Mutilado';
+        else if (result.criticalLocation === 'PIERNA') stateName = 'Pierna Mutilada';
 
         let instantKill = false;
-        if (result.criticalLocation === 'Cabeza' && result.criticalLevel! >= 50) {
+        if (result.criticalLocation === 'CABEZA' && result.criticalLevel! >= 50) {
           instantKill = true;
           defender.currentHp = 0; 
           result.message += " ¡GOLPE FATAL (Amputación/Trauma Masivo)!";
         }
 
         let ignoreCritical = false;
-        if ((defender.secondarySkills?.resistir_dolor || 0) >= 50) {
+        if ((defender.secondarySkills?.['resistir_dolor'] || 0) >= 50) {
           ignoreCritical = true;
           result.message += ` [Resistir el Dolor: El defensor ignora el penalizador de crítico]`;
         } else {
           if (!defender.activeEffects) defender.activeEffects = [];
           defender.activeEffects.push({
-            type: stateName,
-            duration: -1
+            id: Math.random().toString(36).substring(7),
+            name: stateName,
+            type: 'PENALIZADOR',
+            value: result.criticalLevel || 0,
+            durationRounds: 5
           });
         }
         
@@ -190,10 +197,13 @@ export function registerCombatHandlers(ctx: HandlerContext) {
 
     if (result.isFumble && result.fumbleTarget === 'attacker') {
       if (!attacker.activeEffects) attacker.activeEffects = [];
-      const fumbleState = result.fumbleLevel! >= 40 ? 'fumble_major' : 'fumble_minor';
+      const isMajor = result.fumbleLevel! >= 40;
       attacker.activeEffects.push({
-        type: fumbleState,
-        duration: 1
+        id: Math.random().toString(36).substring(7),
+        name: isMajor ? 'Desastre (Pifia Mayor)' : 'Tropiezo (Pifia Menor)',
+        type: 'PENALIZADOR',
+        value: result.fumbleLevel || 15,
+        durationRounds: 1
       });
       await saveCharacter(ctx, attacker);
       broadcastCharacterUpdate(ctx, campaignId, attacker);
@@ -201,7 +211,7 @@ export function registerCombatHandlers(ctx: HandlerContext) {
       io.to(campaignId).emit('combat:fumble_occurred', {
         characterId: attackerId,
         level: result.fumbleLevel,
-        type: fumbleState
+        type: isMajor ? 'fumble_major' : 'fumble_minor'
       });
     }
 

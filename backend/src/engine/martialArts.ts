@@ -1,31 +1,110 @@
-export interface MartialStyle {
-  id: string;
-  name: string;
-  attackBonus: number;
-  defenseBonus: number;
-  baseDamage: number;
-  freeManeuvers: string[]; // Maneuvers that don't have penalty with this style
-}
+import type { MartialStyleDef, StyleBonuses, KnownStyle, ActiveStyle } from '../domain/martialArts/MartialStyleTypes';
+import { createEmptyBonuses } from '../domain/martialArts/MartialStyleTypes';
 
-export const MARTIAL_STYLES_REGISTRY: Record<string, MartialStyle> = {
-  'AIKIDO': { id: 'AIKIDO', name: 'Aikido', attackBonus: 0, defenseBonus: 10, baseDamage: 10, freeManeuvers: ['PRESA', 'DERRIBO'] },
-  'BOXEO': { id: 'BOXEO', name: 'Boxeo', attackBonus: 10, defenseBonus: 10, baseDamage: 20, freeManeuvers: [] },
-  'CAPOEIRA': { id: 'CAPOEIRA', name: 'Capoeira', attackBonus: 10, defenseBonus: 10, baseDamage: 20, freeManeuvers: ['ATAQUE_AREA'] },
-  'DUMOG': { id: 'DUMOG', name: 'Dumog', attackBonus: 0, defenseBonus: 0, baseDamage: 10, freeManeuvers: ['PRESA', 'DESARME'] },
-  'EMPUJE': { id: 'EMPUJE', name: 'Empuje', attackBonus: 0, defenseBonus: 0, baseDamage: 10, freeManeuvers: [] },
-  'KEMPO': { id: 'KEMPO', name: 'Kempo', attackBonus: 10, defenseBonus: 10, baseDamage: 20, freeManeuvers: [] },
-  'KUNG_FU': { id: 'KUNG_FU', name: 'Kung Fu', attackBonus: 10, defenseBonus: 10, baseDamage: 15, freeManeuvers: [] },
-  'LUCHA_LIBRE': { id: 'LUCHA_LIBRE', name: 'Lucha Libre', attackBonus: 0, defenseBonus: 0, baseDamage: 20, freeManeuvers: ['PRESA'] },
-  'MELKAIA': { id: 'MELKAIA', name: 'Melkaia', attackBonus: 0, defenseBonus: 0, baseDamage: 10, freeManeuvers: ['DESARME', 'PRESA'] },
-  'MUAY_THAI': { id: 'MUAY_THAI', name: 'Muay Thai', attackBonus: 10, defenseBonus: 0, baseDamage: 25, freeManeuvers: [] },
-  'PANCRACIO': { id: 'PANCRACIO', name: 'Pancracio', attackBonus: 0, defenseBonus: 0, baseDamage: 20, freeManeuvers: ['PRESA', 'DERRIBO'] },
-  'SAMBO': { id: 'SAMBO', name: 'Sambo', attackBonus: 0, defenseBonus: 10, baseDamage: 15, freeManeuvers: ['PRESA', 'DERRIBO'] },
-  'SHOTOKAN': { id: 'SHOTOKAN', name: 'Shotokan', attackBonus: 10, defenseBonus: 0, baseDamage: 20, freeManeuvers: [] },
-  'TAE_KWON_DO': { id: 'TAE_KWON_DO', name: 'Tae Kwon Do', attackBonus: 10, defenseBonus: 10, baseDamage: 20, freeManeuvers: [] },
-  'TAI_CHI': { id: 'TAI_CHI', name: 'Tai Chi', attackBonus: 0, defenseBonus: 10, baseDamage: 10, freeManeuvers: [] }
+/**
+ * Static registry of all Martial Styles in Anima: Beyond Fantasy.
+ * These are game-defined constants — not player-created.
+ */
+export const MARTIAL_STYLES_REGISTRY: Record<string, MartialStyleDef> = {
+  'AIKIDO': {
+    id: 'AIKIDO', name: 'Aikido',
+    description: 'Estilo defensivo que redirige la fuerza del oponente.',
+    bonuses: { attackBonus: 0, defenseBonus: 10, damageBonus: 10, initiativeBonus: 0, dodgeBonus: 10, freeManeuvers: ['PRESA', 'DERRIBO'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'BOXEO': {
+    id: 'BOXEO', name: 'Boxeo',
+    description: 'Combate cuerpo a cuerpo centrado en golpes de puño.',
+    bonuses: { attackBonus: 10, defenseBonus: 10, damageBonus: 20, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'CAPOEIRA': {
+    id: 'CAPOEIRA', name: 'Capoeira',
+    description: 'Arte marcial acrobática que combina patadas y esquivas.',
+    bonuses: { attackBonus: 10, defenseBonus: 10, damageBonus: 20, initiativeBonus: 5, dodgeBonus: 10, freeManeuvers: ['ATAQUE_AREA'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'DUMOG': {
+    id: 'DUMOG', name: 'Dumog',
+    description: 'Lucha de agarre filipina centrada en control.',
+    bonuses: { attackBonus: 0, defenseBonus: 0, damageBonus: 10, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: ['PRESA', 'DESARME'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'EMPUJE': {
+    id: 'EMPUJE', name: 'Empuje',
+    description: 'Estilo básico sin arte formal.',
+    bonuses: { attackBonus: 0, defenseBonus: 0, damageBonus: 10, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'KEMPO': {
+    id: 'KEMPO', name: 'Kempo',
+    description: 'Arte marcial japonesa equilibrada.',
+    bonuses: { attackBonus: 10, defenseBonus: 10, damageBonus: 20, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'KUNG_FU': {
+    id: 'KUNG_FU', name: 'Kung Fu',
+    description: 'Arte marcial china versátil con múltiples sub-estilos.',
+    bonuses: { attackBonus: 10, defenseBonus: 10, damageBonus: 15, initiativeBonus: 5, dodgeBonus: 5, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'LUCHA_LIBRE': {
+    id: 'LUCHA_LIBRE', name: 'Lucha Libre',
+    description: 'Estilo espectacular centrado en presas y llaves.',
+    bonuses: { attackBonus: 0, defenseBonus: 0, damageBonus: 20, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: ['PRESA'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'MELKAIA': {
+    id: 'MELKAIA', name: 'Melkaia',
+    description: 'Arte marcial Sylvain de desarme y control.',
+    bonuses: { attackBonus: 0, defenseBonus: 0, damageBonus: 10, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: ['DESARME', 'PRESA'] },
+    requiredLevel: 2, switchPenalty: 10,
+  },
+  'MUAY_THAI': {
+    id: 'MUAY_THAI', name: 'Muay Thai',
+    description: 'Arte marcial tailandesa de alto impacto.',
+    bonuses: { attackBonus: 10, defenseBonus: 0, damageBonus: 25, initiativeBonus: 5, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'PANCRACIO': {
+    id: 'PANCRACIO', name: 'Pancracio',
+    description: 'Antiguo combate griego sin restricciones.',
+    bonuses: { attackBonus: 0, defenseBonus: 0, damageBonus: 20, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: ['PRESA', 'DERRIBO'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'SAMBO': {
+    id: 'SAMBO', name: 'Sambo',
+    description: 'Sistema de defensa personal soviético.',
+    bonuses: { attackBonus: 0, defenseBonus: 10, damageBonus: 15, initiativeBonus: 0, dodgeBonus: 5, freeManeuvers: ['PRESA', 'DERRIBO'] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'SHOTOKAN': {
+    id: 'SHOTOKAN', name: 'Shotokan',
+    description: 'Karate tradicional con golpes rectos potentes.',
+    bonuses: { attackBonus: 10, defenseBonus: 0, damageBonus: 20, initiativeBonus: 0, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'TAE_KWON_DO': {
+    id: 'TAE_KWON_DO', name: 'Tae Kwon Do',
+    description: 'Arte marcial coreana con énfasis en patadas.',
+    bonuses: { attackBonus: 10, defenseBonus: 10, damageBonus: 20, initiativeBonus: 5, dodgeBonus: 0, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
+  'TAI_CHI': {
+    id: 'TAI_CHI', name: 'Tai Chi',
+    description: 'Arte marcial interna china de movimientos suaves.',
+    bonuses: { attackBonus: 0, defenseBonus: 10, damageBonus: 10, initiativeBonus: 0, dodgeBonus: 10, freeManeuvers: [] },
+    requiredLevel: 1, switchPenalty: 0,
+  },
 };
 
-export function calculateCombinedStyle(equippedStylesIds: string[]): {
+/**
+ * Calculates the combined bonuses from all active martial styles.
+ * Accepts the new KnownStyle[] format (from CharacterMartialStyle).
+ * @param knownStyles The styles the character knows (with isActive flag)
+ * @returns Combined StyleBonuses from all active styles
+ */
+export function calculateCombinedStyle(knownStyles: KnownStyle[] | string[]): {
   damage: number;
   attackBonus: number;
   defenseBonus: number;
@@ -36,13 +115,25 @@ export function calculateCombinedStyle(equippedStylesIds: string[]): {
   let defenseBonus = 0;
   const freeManeuvers: Set<string> = new Set();
 
-  for (const styleId of equippedStylesIds) {
+  // Support both old string[] format and new KnownStyle[] format
+  const styleIds: string[] = [];
+  for (const entry of knownStyles) {
+    if (typeof entry === 'string') {
+      styleIds.push(entry);
+    } else {
+      if (entry.isActive) {
+        styleIds.push(entry.styleId);
+      }
+    }
+  }
+
+  for (const styleId of styleIds) {
     const style = MARTIAL_STYLES_REGISTRY[styleId];
     if (style) {
-      if (style.baseDamage > damage) damage = style.baseDamage;
-      attackBonus += style.attackBonus;
-      defenseBonus += style.defenseBonus;
-      style.freeManeuvers.forEach(m => freeManeuvers.add(m));
+      if (style.bonuses.damageBonus > damage) damage = style.bonuses.damageBonus;
+      attackBonus += style.bonuses.attackBonus;
+      defenseBonus += style.bonuses.defenseBonus;
+      style.bonuses.freeManeuvers.forEach(m => freeManeuvers.add(m));
     }
   }
 
@@ -54,7 +145,20 @@ export function calculateCombinedStyle(equippedStylesIds: string[]): {
     damage,
     attackBonus,
     defenseBonus,
-    freeManeuvers: Array.from(freeManeuvers)
+    freeManeuvers: Array.from(freeManeuvers),
+  };
+}
+
+/**
+ * Resolves the full ActiveStyle from a style ID.
+ */
+export function resolveActiveStyle(styleId: string): ActiveStyle | null {
+  const def = MARTIAL_STYLES_REGISTRY[styleId];
+  if (!def) return null;
+  return {
+    styleId: def.id,
+    name: def.name,
+    bonuses: { ...def.bonuses },
   };
 }
 

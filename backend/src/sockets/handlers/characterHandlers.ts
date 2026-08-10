@@ -107,16 +107,15 @@ export function registerCharacterHandlers(ctx: HandlerContext) {
       if (character.isDead) return false;
       let changed = false;
       if (isAgony(character.currentHp, character.constitution)) {
-        const rfTotal = (character.resistances?.RF || 0) + roll1d100();
+        const rfTotal = (character.constitution * 10) + roll1d100();
         if (rfTotal >= 120) {
           character.currentHp = 0; character.state = 'INCONSCIENTE'; character.isBleeding = false;
           character.activeEffects.push({
             id: Math.random().toString(36).substring(7),
             name: 'Estabilizado (Heridas graves)',
-            characterId: character.id,
-            modifiers: { HA: -60, HD: -60, ACCION: -60 },
-            duration_rounds: 9999,
-            createdAt: new Date()
+            type: 'PENALIZADOR',
+            value: 60,
+            durationRounds: 9999
           });
           changed = true;
         } else {

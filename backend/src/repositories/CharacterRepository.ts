@@ -15,7 +15,9 @@ export class CharacterRepository {
       include: {
         inventoryItems: {
           include: { item: true }
-        }
+        },
+        techniques: true,
+        knownStyles: true
       }
     });
 
@@ -41,7 +43,18 @@ export class CharacterRepository {
       resistances: typeof data.resistances === 'string' ? JSON.parse(data.resistances) : data.resistances,
       dotes: typeof data.dotes === 'string' ? JSON.parse(data.dotes) : data.dotes,
       kiAbilities: typeof data.kiAbilities === 'string' ? JSON.parse(data.kiAbilities) : data.kiAbilities,
-      inventory: inventoryDict
+      inventory: inventoryDict,
+      kiReserves: typeof data.kiReserves === 'string' ? JSON.parse(data.kiReserves) : data.kiReserves,
+      techniques: data.techniques.map(t => ({
+        ...t,
+        kiCost: typeof t.kiCost === 'string' ? JSON.parse(t.kiCost) : t.kiCost,
+        maintenanceCost: typeof t.maintenanceCost === 'string' ? JSON.parse(t.maintenanceCost) : t.maintenanceCost,
+        effects: typeof t.effects === 'string' ? JSON.parse(t.effects) : t.effects
+      })),
+      knownStyles: data.knownStyles.map(s => ({
+        styleId: s.styleId,
+        isActive: s.isActive
+      }))
     };
 
     return CharacterMapper.toDomain(domainData);
@@ -51,14 +64,14 @@ export class CharacterRepository {
     const dbChar = await this.prisma.character.create({
       data: {
         id: data.id,
-        name: data.name,
-        campaignId: data.campaignId,
-        hp: data.maxHp,
-        max_hp: data.maxHp,
-        ki: data.ki,
-        zeon: data.zeon,
+        name: data.name ?? 'Unknown',
+        campaignId: data.campaignId ?? '',
+        hp: data.maxHp ?? 10,
+        max_hp: data.maxHp ?? 10,
+        ki: data.ki ?? 0,
+        zeon: data.zeon ?? 0,
         initiative_base: 0,
-        gold: data.gold,
+        gold: data.gold ?? 0,
         resistances: JSON.stringify(data.resistances || {}),
         dotes: JSON.stringify([]),
         kiAbilities: JSON.stringify([]),
@@ -67,7 +80,8 @@ export class CharacterRepository {
         currentFatigue: 5,
         maxFatigue: 5,
         isChanneling: false,
-        channeledZeon: 0
+        channeledZeon: 0,
+        kiReserves: "{}"
       },
       include: {
         inventoryItems: { include: { item: true } }
@@ -79,7 +93,10 @@ export class CharacterRepository {
       resistances: typeof dbChar.resistances === 'string' ? JSON.parse(dbChar.resistances) : dbChar.resistances,
       dotes: typeof dbChar.dotes === 'string' ? JSON.parse(dbChar.dotes) : dbChar.dotes,
       kiAbilities: typeof dbChar.kiAbilities === 'string' ? JSON.parse(dbChar.kiAbilities) : dbChar.kiAbilities,
-      inventory: {}
+      kiReserves: typeof dbChar.kiReserves === 'string' ? JSON.parse(dbChar.kiReserves) : dbChar.kiReserves,
+      inventory: {},
+      techniques: [],
+      knownStyles: []
     };
 
     return CharacterMapper.toDomain(domainData);
@@ -106,7 +123,9 @@ export class CharacterRepository {
           maxFatigue: prismaData.maxFatigue,
           isChanneling: prismaData.isChanneling,
           channeledZeon: prismaData.channeledZeon,
-          targetSpellId: prismaData.targetSpellId
+          targetSpellId: prismaData.targetSpellId,
+          kiReserves: prismaData.kiReserves,
+          activeStyleId: prismaData.activeStyleId
         }
       });
 
@@ -140,6 +159,41 @@ export class CharacterRepository {
             itemId: dbItem.id,
             quantity: item.quantity,
             equipped: item.equipped
+          }
+        });
+      }
+
+      // Actualizar Técnicas
+      await tx.technique.deleteMany({
+        where: { characterId: character.id }
+      });
+      for (const tech of character.techniques || []) {
+        await tx.technique.create({
+          data: {
+            id: tech.id, // maintain id if it exists
+            characterId: character.id,
+            name: tech.name,
+            description: tech.description,
+            level: tech.level,
+            kiCost: JSON.stringify(tech.kiCost),
+            maintenanceCost: JSON.stringify(tech.maintenanceCost),
+            effects: JSON.stringify(tech.effects),
+            isPersistent: tech.isPersistent,
+            isActive: tech.isActive
+          }
+        });
+      }
+
+      // Actualizar Estilos
+      await tx.characterMartialStyle.deleteMany({
+        where: { characterId: character.id }
+      });
+      for (const style of character.knownStyles || []) {
+        await tx.characterMartialStyle.create({
+          data: {
+            characterId: character.id,
+            styleId: style.styleId,
+            isActive: style.isActive
           }
         });
       }

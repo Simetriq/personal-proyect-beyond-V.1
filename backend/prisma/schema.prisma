@@ -55,9 +55,12 @@ model Character {
   channeledZeon   Int            @default(0)
   targetSpellId   String?
 
-  // Fase 7: Combate a distancia y Artes Marciales
+  // Fase 7: Combate a distancia
   reloadTurnsLeft Int            @default(0)
-  martialStyles   String         @default("[]")
+
+  // Fase K1: Ki por características (JSON serializado)
+  kiReserves      String         @default("{}")
+  activeStyleId   String?        // ID del estilo marcial activo
 
   // Fase 10 (Subfases B, C, D, E): Fisiología, Razas, Existenciales y Bases
   strength        Int            @default(5)
@@ -85,6 +88,8 @@ model Character {
 
   activeEffects   ActiveEffect[]
   inventoryItems  InventoryItem[]
+  techniques      Technique[]
+  knownStyles     CharacterMartialStyle[]
   campaign        Campaign       @relation(fields: [campaignId], references: [id])
 }
 
@@ -150,4 +155,31 @@ model InventoryItem {
   
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   item        Item      @relation(fields: [itemId], references: [id])
+}
+
+// Fase K1: Técnicas de Dominio
+model Technique {
+  id              String    @id @default(uuid())
+  characterId     String
+  name            String
+  description     String    @default("")
+  level           Int       @default(1)
+  kiCost          String    // JSON: { FUE: 5, DES: 3, ... }
+  maintenanceCost String    @default("{}")
+  effects         String    @default("[]")
+  isPersistent    Boolean   @default(false)
+  isActive        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+// Fase K1: Estilos de Artes Marciales conocidos por personaje
+model CharacterMartialStyle {
+  id          String    @id @default(uuid())
+  characterId String
+  styleId     String    // ID del registro estático (ej. "KUNG_FU")
+  isActive    Boolean   @default(false)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, styleId])
 }

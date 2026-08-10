@@ -17,16 +17,10 @@ export function registerMagicHandlers(ctx: HandlerContext) {
     const { roomId, characterId } = parsed.data;
     const character = await loadCharacter(ctx, roomId, characterId);
     if (character) {
-      if (!character.magicData) {
-        character.magicData = {
-          currentZeon: character.zeon || 100,
-          maxZeon: character.zeon || 100,
-          accumulatedZeon: 0,
-          magicAccumulation: 20, // Default ACT
-          isAccumulating: false
-        };
+      character.isChanneling = !character.isChanneling;
+      if (character.isChanneling && character.channeledZeon === undefined) {
+        character.channeledZeon = 0;
       }
-      character.magicData.isAccumulating = !character.magicData.isAccumulating;
       await saveCharacter(ctx, character);
       broadcastCharacterUpdate(ctx, roomId, character);
     }
@@ -35,8 +29,8 @@ export function registerMagicHandlers(ctx: HandlerContext) {
   socket.on('combat:cast_persistent_spell', safeHandler(socket, async (data: { roomId: string, characterId: string, spellName: string, zeonCost: number, maintenance: number }) => {
     const { roomId, characterId, spellName, zeonCost, maintenance } = data;
     const character = await loadCharacter(ctx, roomId, characterId);
-    if (character && character.magicData && character.magicData.accumulatedZeon >= zeonCost) {
-      character.magicData.accumulatedZeon -= zeonCost;
+    if (character && character.channeledZeon >= zeonCost) {
+      character.channeledZeon -= zeonCost;
       
       if (!roomState.activePersistentSpells[roomId]) roomState.activePersistentSpells[roomId] = [];
       
@@ -73,18 +67,18 @@ export function registerMagicHandlers(ctx: HandlerContext) {
 
 export const processTurnMagicMaintenance = async (ctx: HandlerContext, roomId: string, activeCharacterId: string) => {
   const character = await loadCharacter(ctx, roomId, activeCharacterId);
-  if (!character || !character.magicData) return;
+  if (!character) return;
 
-  const magic = character.magicData;
   let stateChanged = false;
 
-  if (magic.isAccumulating) {
-    const spaceLeft = magic.maxZeon - magic.accumulatedZeon;
-    const addAmount = Math.min(magic.magicAccumulation, spaceLeft);
+  if (character.isChanneling) {
+    const spaceLeft = character.zeon - (character.channeledZeon || 0);
+    const accumulationBase = 20; // Default ACT
+    const addAmount = Math.min(accumulationBase, spaceLeft);
     
     if (addAmount > 0) {
-      magic.accumulatedZeon += addAmount;
-      emitSystemLog(ctx, roomId, `✨ ${character.name} canaliza el flujo del alma. Pozo de Zeon actual: [${magic.accumulatedZeon}]`);
+      character.channeledZeon = (character.channeledZeon || 0) + addAmount;
+      emitSystemLog(ctx, roomId, `✨ ${character.name} canaliza el flujo del alma. Pozo de Zeon actual: [${character.channeledZeon}]`);
       stateChanged = true;
     }
   }
@@ -94,12 +88,14 @@ export const processTurnMagicMaintenance = async (ctx: HandlerContext, roomId: s
   
   let spellsCollapsed = false;
   userSpells.forEach((spell: PersistentSpell) => {
-    if (magic.currentZeon >= spell.zeonMaintenance) {
-      magic.currentZeon -= spell.zeonMaintenance;
+    if (character.zeon >= spell.zeonMaintenance) {
+      character.zeon -= spell.zeonMaintenance;
       emitSystemLog(ctx, roomId, `🔮 Mantenimiento: ${character.name} consume ${spell.zeonMaintenance} de Zeon para sostener [${spell.name}].`);
       stateChanged = true;
     } else {
-      ctx.roomState.activePersistentSpells[roomId] = ctx.roomState.activePersistentSpells[roomId].filter((s: PersistentSpell) => s.id !== spell.id);
+      if (ctx.roomState.activePersistentSpells[roomId]) {
+        ctx.roomState.activePersistentSpells[roomId] = ctx.roomState.activePersistentSpells[roomId].filter((s: PersistentSpell) => s.id !== spell.id);
+      }
       emitSystemLog(ctx, roomId, `⚠️ El conjuro [${spell.name}] de ${character.name} colapsa por falta de energía mística.`);
       spellsCollapsed = true;
     }

@@ -128,12 +128,12 @@ export class CombatTracker {
       return null;
     }
 
-    return this.initiativeQueue[this.turnIndex].characterId;
+    return this.initiativeQueue[this.turnIndex]?.characterId || null;
   }
 
   getActiveCharacterId(): string | null {
     if (this.turnIndex >= 0 && this.turnIndex < this.initiativeQueue.length) {
-      return this.initiativeQueue[this.turnIndex].characterId;
+      return this.initiativeQueue[this.turnIndex]?.characterId || null;
     }
     return null;
   }
@@ -146,6 +146,7 @@ export class CombatTracker {
     if (this.turnIndex < 0 || this.turnIndex >= this.initiativeQueue.length) return [];
     
     const active = this.initiativeQueue[this.turnIndex];
+    if (!active) return [];
     if (!active.isRanged) return [active.characterId];
 
     const parallel: string[] = [active.characterId];
@@ -153,7 +154,7 @@ export class CombatTracker {
     // Revisar siguientes en la cola ordenada
     for (let i = this.turnIndex + 1; i < this.initiativeQueue.length; i++) {
         const next = this.initiativeQueue[i];
-        if (next.isRanged && (active.initiative - next.initiative) < 25) {
+        if (next && next.isRanged && (active.initiative - next.initiative) < 25) {
             parallel.push(next.characterId);
         } else {
             break; 

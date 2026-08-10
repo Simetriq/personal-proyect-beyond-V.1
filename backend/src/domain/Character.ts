@@ -1,6 +1,10 @@
 import { Resistances } from './Resistances';
 import { applyDirectDamage } from '../engine/combat';
 import { calculateCombinedStyle } from '../engine/martialArts';
+import type { KiReserves, KiCost, KiCharacteristic } from './ki/KiTypes';
+import { createDefaultKiReserves, KI_CHARACTERISTICS, canAffordKiCost } from './ki/KiTypes';
+import type { TechniqueData } from './techniques/TechniqueTypes';
+import type { KnownStyle } from './martialArts/MartialStyleTypes';
 
 export type CharacterState = 'ACTIVO' | 'INCONSCIENTE' | 'MUERTO';
 
@@ -70,7 +74,11 @@ export interface CharacterData {
   channeledZeon?: number;
   targetSpellId?: string | null;
   reloadTurnsLeft?: number;
-  martialStyles?: string[];
+  martialStyles?: string[];       // Legacy: old string[] format
+  knownStyles?: KnownStyle[];     // New: structured known styles
+  activeStyleId?: string | null;
+  kiReserves?: KiReserves;
+  techniques?: TechniqueData[];
   level?: number;
   category?: string;
   totalDP?: number;
@@ -89,6 +97,8 @@ export interface CharacterData {
   hasInhumanity?: boolean;
   hasZen?: boolean;
   isDead?: boolean;
+  campaignId?: string;
+  maxHp?: number;
 }
 
 export class Character {
@@ -125,8 +135,14 @@ export class Character {
 
   // Fase 7
   public reloadTurnsLeft: number;
-  public martialStyles: string[];
+  public martialStyles: string[]; // Legacy compat
+  public knownStyles: KnownStyle[];
+  public activeStyleId: string | null;
   public activeMartialBonuses: { damage: number; attackBonus: number; defenseBonus: number; freeManeuvers: string[] } = { damage: 10, attackBonus: 0, defenseBonus: 0, freeManeuvers: [] };
+
+  // Fase K1: Ki por características
+  public kiReserves: KiReserves;
+  public techniques: TechniqueData[];
 
   // Fase 9
   public level: number;
@@ -193,7 +209,18 @@ export class Character {
     // Fase 7
     this.reloadTurnsLeft = data.reloadTurnsLeft || 0;
     this.martialStyles = Array.isArray(data.martialStyles) ? data.martialStyles : [];
-    this.activeMartialBonuses = calculateCombinedStyle(this.martialStyles);
+    this.knownStyles = Array.isArray(data.knownStyles) ? data.knownStyles : [];
+    this.activeStyleId = data.activeStyleId || null;
+    // Use knownStyles if available, fall back to legacy martialStyles
+    if (this.knownStyles.length > 0) {
+      this.activeMartialBonuses = calculateCombinedStyle(this.knownStyles);
+    } else {
+      this.activeMartialBonuses = calculateCombinedStyle(this.martialStyles);
+    }
+
+    // Fase K1: Ki por características
+    this.kiReserves = data.kiReserves || createDefaultKiReserves();
+    this.techniques = Array.isArray(data.techniques) ? data.techniques : [];
 
     // Fase 9
     this.level = data.level || 1;
@@ -322,7 +349,7 @@ export class Character {
     // Sumar modificadores de todos los ítems equipados
     for (const itemId in this.inventory) {
       const item = this.inventory[itemId];
-      if (item.equipped && item.modifiers) {
+      if (item && item.equipped && item.modifiers) {
         FIL += item.modifiers.FIL || 0;
         CON += item.modifiers.CON || 0;
         PEN += item.modifiers.PEN || 0;
@@ -518,6 +545,113 @@ export class Character {
     penalty -= bleedingPenalty;
     
     return penalty;
+  }
+
+  // ─── Fase K1: Ki por Características ───
+
+  /**
+   * Accumulates Ki in a specific characteristic reserve.
+   * @param characteristic Which reserve to charge
+   * @param amount How much Ki to add
+   */
+  public accumulateKi(characteristic: KiCharacteristic, amount: number): void {
+    const pool = this.kiReserves[characteristic];
+    pool.current = Math.min(pool.current + amount, pool.maximum);
+  }
+
+  /**
+   * Spends Ki from multiple reserves simultaneously.
+   * Validates that all reserves have enough before spending.
+   * @param costs Which reserves to spend from and how much
+   * @returns true if spend was successful, false if insufficient Ki
+   */
+  public spendKiFromReserves(costs: KiCost): boolean {
+    if (!canAffordKiCost(this.kiReserves, costs)) {
+      return false;
+    }
+    for (const key of KI_CHARACTERISTICS) {
+      const required = costs[key] ?? 0;
+      if (required > 0) {
+        this.kiReserves[key].current -= required;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the total Ki currently available across all reserves.
+   */
+  public getTotalKi(): number {
+    let total = 0;
+    for (const key of KI_CHARACTERISTICS) {
+      total += this.kiReserves[key].current;
+    }
+    return total;
+  }
+
+  // ─── Fase K1: Técnicas de Dominio ───
+
+  /**
+   * Adds a technique to the character's known techniques.
+   */
+  public learnTechnique(technique: TechniqueData): void {
+    this.techniques.push(technique);
+  }
+
+  /**
+   * Activates a technique by ID, spending its Ki cost.
+   * @returns true if activation was successful
+   */
+  public activateTechnique(techniqueId: string): boolean {
+    const technique = this.techniques.find(t => t.id === techniqueId);
+    if (!technique || technique.isActive) return false;
+
+    if (!this.spendKiFromReserves(technique.kiCost)) {
+      return false;
+    }
+
+    technique.isActive = true;
+    return true;
+  }
+
+  /**
+   * Deactivates a maintained technique.
+   */
+  public deactivateTechnique(techniqueId: string): boolean {
+    const technique = this.techniques.find(t => t.id === techniqueId);
+    if (!technique || !technique.isActive) return false;
+
+    technique.isActive = false;
+    return true;
+  }
+
+  // ─── Fase K1: Estilos de Artes Marciales ───
+
+  /**
+   * Learns a new martial style.
+   */
+  public learnStyle(styleId: string): void {
+    if (this.knownStyles.some(s => s.styleId === styleId)) return;
+    this.knownStyles.push({ styleId, isActive: false });
+  }
+
+  /**
+   * Sets a known style as the active martial style.
+   * Deactivates any previously active style.
+   */
+  public setActiveStyle(styleId: string): boolean {
+    const style = this.knownStyles.find(s => s.styleId === styleId);
+    if (!style) return false;
+
+    // Deactivate all styles
+    for (const s of this.knownStyles) {
+      s.isActive = false;
+    }
+    // Activate the chosen one
+    style.isActive = true;
+    this.activeStyleId = styleId;
+    this.activeMartialBonuses = calculateCombinedStyle(this.knownStyles);
+    return true;
   }
   
 }

@@ -1,4 +1,7 @@
-import { Character, CharacterData, ActiveEffect, Item } from '../domain/Character';
+import { Character, CharacterData, ActiveEffect } from '../domain/Character';
+import type { KiReserves } from '../domain/ki/KiTypes';
+import type { KnownStyle } from '../domain/martialArts/MartialStyleTypes';
+import type { TechniqueData } from '../domain/techniques/TechniqueTypes';
 
 /**
  * Represents the flat structure returned by Prisma for persistence.
@@ -48,6 +51,9 @@ export interface PrismaCharacterData {
   hasInhumanity: boolean;
   hasZen: boolean;
   isDead: boolean;
+  // Fase K1
+  kiReserves: string; // JSON serialized KiReserves
+  activeStyleId: string | null;
 }
 
 /**
@@ -115,6 +121,9 @@ export class CharacterMapper {
       hasInhumanity: character.hasInhumanity,
       hasZen: character.hasZen,
       isDead: character.isDead,
+      // Fase K1
+      kiReserves: JSON.stringify(character.kiReserves),
+      activeStyleId: character.activeStyleId,
     };
   }
 }

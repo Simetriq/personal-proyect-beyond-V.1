@@ -51,7 +51,8 @@ async function startServer() {
     setupSocketEvents(io);
 
     // Inicia el servidor web
-    const port = process.env['PORT'] || 3001;
+    const portStr = process.env['PORT'];
+    const port = portStr ? parseInt(portStr, 10) : 3001;
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Servidor Anima Combat Assistant corriendo en http://localhost:${port}`);
     

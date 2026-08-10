@@ -9,8 +9,8 @@ describe('Engine: Alerts', () => {
   it('should trigger alert if hp is strictly below 30%', () => {
     const alerts = checkTriggers(29, 100);
     expect(alerts.length).toBe(1);
-    expect(alerts[0].type).toBe('HEALTH_CRITICAL');
-    expect(alerts[0].message).toBe('¡Salud Crítica! Revisa tus dotes de supervivencia');
+    expect(alerts[0]!.type).toBe('HEALTH_CRITICAL');
+    expect(alerts[0]!.message).toBe('¡Salud Crítica! Revisa tus dotes de supervivencia');
   });
 
   it('should not trigger if maxHp is 0', () => {
