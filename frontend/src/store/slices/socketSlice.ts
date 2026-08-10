@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 import { io } from 'socket.io-client';
 import type { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character, TurnTracker } from '../types';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3001`;
 
 export interface SocketSlice {
   connectToCampaign: (campaignId: string) => void;
