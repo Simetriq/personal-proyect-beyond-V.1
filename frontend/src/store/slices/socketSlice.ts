@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { io } from 'socket.io-client';
-import { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character, TurnTracker } from '../types';
+import type { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character, TurnTracker } from '../types';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
 
