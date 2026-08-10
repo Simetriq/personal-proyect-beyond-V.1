@@ -1,7 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { CombatStore, DamageType } from '../types';
-import { CombatLogEntry } from '../../types/combatLog';
-import { TurnTracker } from '../../../../backend/src/types/combat';
+import type { CombatStore, DamageType, CombatLogEntry, TurnTracker } from '../types';
 export interface CombatSlice {
   addLog: (log: CombatLogEntry) => void;
   clearLogs: () => void;

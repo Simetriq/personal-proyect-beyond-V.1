@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { CombatStore } from '../types';
+import type { CombatStore } from '../types';
 
 export interface CharacterSlice {
   setMyCharacterId: (id: string) => void;

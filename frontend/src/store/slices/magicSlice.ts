@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { CombatStore } from '../types';
+import type { CombatStore } from '../types';
 
 export interface MagicSlice {
   startChanneling: (characterId: string, spellId: string) => void;
