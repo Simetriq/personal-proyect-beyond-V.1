@@ -1,4 +1,4 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import { CombatStore, DamageType } from '../types';
 import { CombatLogEntry } from '../../types/combatLog';
 import { TurnTracker } from '../../../../backend/src/types/combat';

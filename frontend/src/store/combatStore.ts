@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CombatStore } from './types';
+import type { CombatStore } from './types';
 import { createSocketSlice } from './slices/socketSlice';
 import { createCharacterSlice } from './slices/characterSlice';
 import { createCombatSlice } from './slices/combatSlice';

@@ -1,4 +1,4 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import { io } from 'socket.io-client';
 import type { CombatStore, DiceRoll, CombatState, CombatLogEntry, Character, TurnTracker } from '../types';
 
