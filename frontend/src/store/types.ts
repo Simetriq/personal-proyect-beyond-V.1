@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io-client';
-import { TurnTracker } from '../../../backend/src/types/combat';
-import { CombatLogEntry } from '../types/combatLog';
+import type { TurnTracker } from '../components/TurnOrderTracker';
+import type { CombatLogEntry } from '../components/BattleLogPanel';
 
 export type DamageType = 'FIL' | 'CON' | 'PEN' | 'CAL' | 'ELE' | 'FRI' | 'ENE';
 

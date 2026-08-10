@@ -36,7 +36,7 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
       }));
     });
 
-    socket.on('character_updated', (data: Record<string, unknown>) => {
+    socket.on('character_updated', (data: any) => {
       console.log('Personaje actualizado:', data);
       set((state) => ({
         characters: {
@@ -124,7 +124,7 @@ export const createSocketSlice: StateCreator<CombatStore, [], [], SocketSlice> =
       console.log(`¡Contraataque de ${data.defenderId} confirmado!`);
     });
 
-    socket.on('gm:update_player_draft', (draft: Record<string, unknown>) => {
+    socket.on('gm:update_player_draft', (draft: any) => {
       set((state) => ({
         progressionDrafts: {
           ...state.progressionDrafts,
